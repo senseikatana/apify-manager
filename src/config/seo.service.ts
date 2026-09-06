@@ -1,159 +1,165 @@
 import type { SiteConfig } from "./site.config.js";
 
 /**
- * SEO meta tag configuration for a single page.
+ * Page-level SEO input. Framework-agnostic — works with Vanilla, Astro,
+ * Vue/React SPAs, Express HTML shells, etc. Prefer Nuxt's built-in
+ * `useSeoMeta` / `useHead` inside Nuxt apps.
  */
 export interface SeoMeta {
-	/** Page title (will be suffixed with site title). */
+	/** Page title (suffixed with site title when different). */
 	title: string;
 	/** Page description (falls back to site description). */
 	description?: string;
 	/** Canonical URL (absolute). If omitted, derived from `url`. */
 	canonical?: string;
-	/** Page URL (absolute, e.g. "https://example.com/blog/post/"). */
+	/** Absolute page URL (e.g. `"https://example.com/blog/post/"`). */
 	url?: string;
-	/** OG image URL (absolute). Falls back to site config. */
+	/** OG image URL (absolute or site-relative). Falls back to site config. */
 	ogImage?: string;
-	/** Content type: "website" | "article" | "profile" (default: "website"). */
+	/** Content type: `"website"` | `"article"` | `"profile"` (default: `"website"`). */
 	ogType?: "website" | "article" | "profile";
-	/** Article published date (ISO string, for og:type=article). */
+	/** Article published date (ISO string, for `og:type=article`). */
 	publishedTime?: string;
-	/** Article modified date (ISO string, for og:type=article). */
+	/** Article modified date (ISO string, for `og:type=article`). */
 	modifiedTime?: string;
-	/** Article author (for og:type=article). */
+	/** Article author (for `og:type=article`). */
 	author?: string;
-	/** Article tags (for og:type=article). */
+	/** Article tags (for `og:type=article`). */
 	tags?: string[];
 	/** Whether to add noindex (default: false). */
 	noindex?: boolean;
 }
 
 /**
- * Generates all `<head>` meta tags for SEO, Open Graph, Twitter Card,
- * canonical URL, and JSON-LD structured data.
+ * One `<head>` node as data (safe to map in any framework / Vanilla DOM).
+ */
+export interface SeoTagNode {
+	tag: "title" | "meta" | "link" | "script";
+	attrs?: Record<string, string>;
+	/** Text content for `<title>` / `<script>`. */
+	text?: string;
+}
+
+/**
+ * Resolved SEO payload from {@link useSeoTag}.
  *
- * @param config - Site-wide configuration.
- * @param meta - Page-specific meta.
- * @returns HTML string of meta tags to inject in `<head>`.
+ * - **SSR / Astro / templates:** use `html` (escaped string).
+ * - **Vanilla / SPA:** use `tags` + {@link useApplySeoTag}, or map `tags` yourself.
+ * - **Any framework:** use `title` / `description` / `url` / `ogImage` as props.
+ */
+export interface SeoTagResult {
+	/** Full `<head>` HTML fragment (escaped). */
+	html: string;
+	/** Structured nodes for programmatic injection. */
+	tags: SeoTagNode[];
+	/** Resolved document title text. */
+	title: string;
+	/** Resolved meta description. */
+	description: string;
+	/** Absolute page URL used for canonical / Open Graph. */
+	url: string;
+	/** Absolute OG image URL, if configured. */
+	ogImage?: string;
+	/** Page-level input meta. */
+	meta: SeoMeta;
+	/** JSON-LD object when enabled (also embedded in `html` / `tags`). */
+	jsonLd?: Record<string, unknown>;
+}
+
+/** @deprecated Use {@link SeoTagResult}. */
+export type SeoTagsResult = SeoTagResult;
+
+/**
+ * Builds a framework-agnostic SEO payload from site config + page meta.
  *
- * @example
+ * Pure function — no DOM, no Vue/Nuxt reactivity. Nuxt apps should use
+ * Nuxt's own head APIs; this is for Vanilla, Astro, Vue/React SPAs, Express, etc.
+ *
+ * @example Vanilla
+ * ```ts
+ * import { useSeoTag, useApplySeoTag } from "katanakit-js";
+ *
+ * const seo = useSeoTag(siteConfig, { title: "Home", url: location.href });
+ * useApplySeoTag(seo);
+ * ```
+ *
+ * @example Astro Layout
  * ```astro
  * ---
- * import { siteConfig } from "@/config/site.config";
- * import { useGenerateMetaTags } from "@/config/seo.service";
- *
- * const metaTags = useGenerateMetaTags(siteConfig, {
- *   title: "My Blog Post",
- *   description: "A great post about TypeScript",
- *   url: "https://example.com/blog/my-post/",
- *   ogType: "article",
- *   publishedTime: "2024-01-15T00:00:00Z",
- * });
+ * import { useSeoTag } from "katanakit-js";
+ * const seo = useSeoTag(siteConfig, { title: Astro.props.title, url: Astro.url.href });
  * ---
- * <head>
- *   <Fragment set:html={metaTags} />
- * </head>
+ * <head><Fragment set:html={seo.html} /></head>
+ * ```
+ *
+ * @example Vue / React (string or nodes)
+ * ```ts
+ * const seo = useSeoTag(siteConfig, { title: route.meta.title });
+ * // put seo.html in index.html shell, or map seo.tags into your head lib
+ * document.title = seo.title;
  * ```
  */
+export function useSeoTag(config: SiteConfig, meta: SeoMeta): SeoTagResult {
+	const resolved = resolveSeoFields(config, meta);
+	const tags = buildSeoTagNodes(config, meta, resolved);
+	const rss = useRssHeadLink(config);
+	if (rss) {
+		tags.push(...parseSingleLinkTag(rss));
+	}
+
+	return {
+		html: serializeSeoTags(tags),
+		tags,
+		title: resolved.title,
+		description: resolved.description,
+		url: resolved.url,
+		ogImage: resolved.ogImage,
+		meta,
+		jsonLd: resolved.jsonLd,
+	};
+}
+
+/**
+ * @deprecated Prefer {@link useSeoTag} (same return value).
+ */
+export const useSeoTags = useSeoTag;
+
+/**
+ * Applies {@link SeoTagResult.tags} into a document `<head>` (Vanilla / SPA).
+ * No-op when `document` is unavailable (SSR). Replaces prior KatanaKit nodes
+ * marked with `data-katanakit-seo`.
+ */
+export function useApplySeoTag(
+	seo: SeoTagResult,
+	head: ParentNode | null = typeof document !== "undefined" ? document.head : null,
+): void {
+	if (!head || typeof document === "undefined") return;
+
+	for (const el of head.querySelectorAll("[data-katanakit-seo]")) {
+		el.remove();
+	}
+
+	for (const node of seo.tags) {
+		const el = document.createElement(node.tag);
+		el.setAttribute("data-katanakit-seo", "");
+		if (node.attrs) {
+			for (const [key, value] of Object.entries(node.attrs)) {
+				el.setAttribute(key, value);
+			}
+		}
+		if (node.text !== undefined) {
+			el.textContent = node.text;
+		}
+		head.appendChild(el);
+	}
+}
+
+/**
+ * HTML string of meta tags (no RSS). Prefer {@link useSeoTag} for the full payload.
+ */
 export function useGenerateMetaTags(config: SiteConfig, meta: SeoMeta): string {
-	const tags: string[] = [];
-
-	const fullTitle = meta.title === config.title ? config.title : `${meta.title} | ${config.title}`;
-
-	const description = meta.description ?? config.description;
-	const url = meta.url ?? config.site;
-	const ogImage = meta.ogImage ?? config.ogImage;
-	const ogImageUrl = ogImage
-		? ogImage.startsWith("http")
-			? ogImage
-			: `${config.site}${ogImage}`
-		: undefined;
-
-	// Basic meta tags.
-	tags.push(`<title>${escapeHtml(fullTitle)}</title>`);
-	tags.push(`<meta name="description" content="${escapeAttr(description)}" />`);
-
-	if (config.author) {
-		tags.push(`<meta name="author" content="${escapeAttr(config.author)}" />`);
-	}
-
-	// Canonical URL.
-	if (config.seo.canonical && url) {
-		const canonical = meta.canonical ?? url;
-		tags.push(`<link rel="canonical" href="${escapeAttr(canonical)}" />`);
-	}
-
-	// Noindex.
-	if (meta.noindex || config.seo.noindex) {
-		tags.push('<meta name="robots" content="noindex, nofollow" />');
-	}
-
-	// Open Graph.
-	if (config.seo.openGraph) {
-		tags.push(`<meta property="og:type" content="${meta.ogType ?? "website"}" />`);
-		tags.push(`<meta property="og:title" content="${escapeAttr(fullTitle)}" />`);
-		tags.push(`<meta property="og:description" content="${escapeAttr(description)}" />`);
-		tags.push(`<meta property="og:site_name" content="${escapeAttr(config.title)}" />`);
-		tags.push(`<meta property="og:locale" content="${escapeAttr(config.lang.replace("-", "_"))}" />`);
-
-		if (url) {
-			tags.push(`<meta property="og:url" content="${escapeAttr(url)}" />`);
-		}
-		if (ogImageUrl) {
-			tags.push(`<meta property="og:image" content="${escapeAttr(ogImageUrl)}" />`);
-			tags.push(`<meta property="og:image:alt" content="${escapeAttr(fullTitle)}" />`);
-		}
-
-		// Article-specific OG tags.
-		if (meta.ogType === "article") {
-			if (meta.publishedTime) {
-				tags.push(
-					`<meta property="article:published_time" content="${escapeAttr(meta.publishedTime)}" />`,
-				);
-			}
-			if (meta.modifiedTime) {
-				tags.push(
-					`<meta property="article:modified_time" content="${escapeAttr(meta.modifiedTime)}" />`,
-				);
-			}
-			if (meta.author) {
-				tags.push(`<meta property="article:author" content="${escapeAttr(meta.author)}" />`);
-			}
-			if (meta.tags) {
-				for (const tag of meta.tags) {
-					tags.push(`<meta property="article:tag" content="${escapeAttr(tag)}" />`);
-				}
-			}
-		}
-	}
-
-	// Twitter Card.
-	if (config.seo.twitterCard) {
-		tags.push('<meta name="twitter:card" content="summary_large_image" />');
-		tags.push(`<meta name="twitter:title" content="${escapeAttr(fullTitle)}" />`);
-		tags.push(`<meta name="twitter:description" content="${escapeAttr(description)}" />`);
-
-		if (config.twitter) {
-			tags.push(`<meta name="twitter:site" content="@${escapeAttr(config.twitter)}" />`);
-			tags.push(`<meta name="twitter:creator" content="@${escapeAttr(config.twitter)}" />`);
-		}
-		if (ogImageUrl) {
-			tags.push(`<meta name="twitter:image" content="${escapeAttr(ogImageUrl)}" />`);
-		}
-	}
-
-	// JSON-LD structured data.
-	if (config.seo.jsonLd) {
-		const jsonLd = buildJsonLd(config, meta);
-		// Escape <, >, & to prevent XSS via </script> breakout.
-		const safeJson = JSON.stringify(jsonLd)
-			.replace(/</g, "\\u003c")
-			.replace(/>/g, "\\u003e")
-			.replace(/&/g, "\\u0026");
-		tags.push(`<script type="application/ld+json">${safeJson}</script>`);
-	}
-
-	return tags.join("\n");
+	const resolved = resolveSeoFields(config, meta);
+	return serializeSeoTags(buildSeoTagNodes(config, meta, resolved));
 }
 
 /**
@@ -177,100 +183,23 @@ export function useRssHeadLink(config: SiteConfig): string {
 }
 
 /**
- * Generates all default `<head>` meta tags for a page (title, description,
- * canonical, OG, Twitter, JSON-LD, RSS link).
- *
- * Convenience wrapper around `useGenerateMetaTags` + `useRssHeadLink`.
+ * Full `<head>` HTML (meta + RSS). Equivalent to `useSeoTag(config, meta).html`.
  */
 export function useHeadTags(config: SiteConfig, meta: SeoMeta): string {
-	const metaTags = useGenerateMetaTags(config, meta);
-	const rssLink = useRssHeadLink(config);
-	return rssLink ? `${metaTags}\n${rssLink}` : metaTags;
+	return useSeoTag(config, meta).html;
 }
 
-/**
- * Resolved SEO payload for Astro layouts (pure, non-reactive).
- *
- * Unlike Nuxt `useSeoMeta` / `useHead`, Astro has no reactive head in
- * `.astro` frontmatter — build this object once and inject `html` into
- * `<head>` (or pass the whole result as Layout props).
- */
-export interface SeoTagsResult {
-	/** Full `<head>` HTML for `<Fragment set:html={html} />`. */
-	html: string;
-	/** Resolved document title text (with site suffix when applicable). */
+// --- Internals ---
+
+interface ResolvedSeoFields {
 	title: string;
-	/** Resolved meta description. */
 	description: string;
-	/** Absolute page URL used for canonical / Open Graph. */
 	url: string;
-	/** Absolute OG image URL, if configured. */
 	ogImage?: string;
-	/** Page-level input meta (handy when forwarding Layout props). */
-	meta: SeoMeta;
+	jsonLd?: Record<string, unknown>;
 }
 
-/**
- * Builds SEO tags for Astro from `SiteConfig` + page `SeoMeta`.
- *
- * Pure helper — no Vue/Nuxt reactivity. Call in frontmatter, then either:
- * - inject `html` with `<Fragment set:html={seo.html} />`, or
- * - pass `seo` (or `seo.meta`) into a Layout via props.
- *
- * @param config - Site-wide configuration.
- * @param meta - Page-specific meta.
- * @returns Resolved fields plus the HTML string for `<head>`.
- *
- * @example
- * ```astro
- * ---
- * // src/layouts/Layout.astro
- * import { useSeoTags, type SeoMeta } from "katanakit-js";
- * import { siteConfig } from "../config/site";
- *
- * interface Props extends SeoMeta {}
- * const seo = useSeoTags(siteConfig, {
- *   title: Astro.props.title,
- *   description: Astro.props.description,
- *   url: Astro.props.url ?? Astro.url.href,
- *   ogType: Astro.props.ogType,
- * });
- * ---
- * <!doctype html>
- * <html lang={siteConfig.lang}>
- *   <head>
- *     <meta charset="utf-8" />
- *     <Fragment set:html={seo.html} />
- *   </head>
- *   <body>
- *     <slot />
- *   </body>
- * </html>
- * ```
- *
- * @example
- * ```astro
- * ---
- * // src/pages/blog/[slug].astro — pass meta into the layout
- * import Layout from "../../layouts/Layout.astro";
- * import { useSeoTags } from "katanakit-js";
- * import { siteConfig } from "../../config/site";
- *
- * const { post } = Astro.props;
- * const seo = useSeoTags(siteConfig, {
- *   title: post.data.title,
- *   description: post.data.description,
- *   url: new URL(`/blog/${post.slug}/`, siteConfig.site).href,
- *   ogType: "article",
- *   publishedTime: post.data.date.toISOString(),
- * });
- * ---
- * <Layout title={seo.meta.title} description={seo.meta.description} url={seo.url} ogType="article">
- *   <article set:html={post.body} />
- * </Layout>
- * ```
- */
-export function useSeoTags(config: SiteConfig, meta: SeoMeta): SeoTagsResult {
+function resolveSeoFields(config: SiteConfig, meta: SeoMeta): ResolvedSeoFields {
 	const title = meta.title === config.title ? config.title : `${meta.title} | ${config.title}`;
 	const description = meta.description ?? config.description;
 	const url = meta.url ?? config.site;
@@ -280,18 +209,142 @@ export function useSeoTags(config: SiteConfig, meta: SeoMeta): SeoTagsResult {
 			? ogImageRaw
 			: `${config.site}${ogImageRaw}`
 		: undefined;
-
-	return {
-		html: useHeadTags(config, meta),
-		title,
-		description,
-		url,
-		ogImage,
-		meta,
-	};
+	const jsonLd = config.seo.jsonLd ? buildJsonLd(config, meta) : undefined;
+	return { title, description, url, ogImage, jsonLd };
 }
 
-// --- Internal helpers ---
+function buildSeoTagNodes(
+	config: SiteConfig,
+	meta: SeoMeta,
+	resolved: ResolvedSeoFields,
+): SeoTagNode[] {
+	const tags: SeoTagNode[] = [];
+	const { title, description, url, ogImage, jsonLd } = resolved;
+
+	tags.push({ tag: "title", text: title });
+	tags.push({ tag: "meta", attrs: { name: "description", content: description } });
+
+	if (config.author) {
+		tags.push({ tag: "meta", attrs: { name: "author", content: config.author } });
+	}
+
+	if (config.seo.canonical && url) {
+		const canonical = meta.canonical ?? url;
+		tags.push({ tag: "link", attrs: { rel: "canonical", href: canonical } });
+	}
+
+	if (meta.noindex || config.seo.noindex) {
+		tags.push({ tag: "meta", attrs: { name: "robots", content: "noindex, nofollow" } });
+	}
+
+	if (config.seo.openGraph) {
+		tags.push({ tag: "meta", attrs: { property: "og:type", content: meta.ogType ?? "website" } });
+		tags.push({ tag: "meta", attrs: { property: "og:title", content: title } });
+		tags.push({ tag: "meta", attrs: { property: "og:description", content: description } });
+		tags.push({ tag: "meta", attrs: { property: "og:site_name", content: config.title } });
+		tags.push({
+			tag: "meta",
+			attrs: { property: "og:locale", content: config.lang.replace("-", "_") },
+		});
+		if (url) {
+			tags.push({ tag: "meta", attrs: { property: "og:url", content: url } });
+		}
+		if (ogImage) {
+			tags.push({ tag: "meta", attrs: { property: "og:image", content: ogImage } });
+			tags.push({ tag: "meta", attrs: { property: "og:image:alt", content: title } });
+		}
+		if (meta.ogType === "article") {
+			if (meta.publishedTime) {
+				tags.push({
+					tag: "meta",
+					attrs: { property: "article:published_time", content: meta.publishedTime },
+				});
+			}
+			if (meta.modifiedTime) {
+				tags.push({
+					tag: "meta",
+					attrs: { property: "article:modified_time", content: meta.modifiedTime },
+				});
+			}
+			if (meta.author) {
+				tags.push({ tag: "meta", attrs: { property: "article:author", content: meta.author } });
+			}
+			if (meta.tags) {
+				for (const tag of meta.tags) {
+					tags.push({ tag: "meta", attrs: { property: "article:tag", content: tag } });
+				}
+			}
+		}
+	}
+
+	if (config.seo.twitterCard) {
+		tags.push({ tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" } });
+		tags.push({ tag: "meta", attrs: { name: "twitter:title", content: title } });
+		tags.push({ tag: "meta", attrs: { name: "twitter:description", content: description } });
+		if (config.twitter) {
+			tags.push({ tag: "meta", attrs: { name: "twitter:site", content: `@${config.twitter}` } });
+			tags.push({
+				tag: "meta",
+				attrs: { name: "twitter:creator", content: `@${config.twitter}` },
+			});
+		}
+		if (ogImage) {
+			tags.push({ tag: "meta", attrs: { name: "twitter:image", content: ogImage } });
+		}
+	}
+
+	if (jsonLd) {
+		const safeJson = JSON.stringify(jsonLd)
+			.replace(/</g, "\\u003c")
+			.replace(/>/g, "\\u003e")
+			.replace(/&/g, "\\u0026");
+		tags.push({
+			tag: "script",
+			attrs: { type: "application/ld+json" },
+			text: safeJson,
+		});
+	}
+
+	return tags;
+}
+
+function serializeSeoTags(tags: SeoTagNode[]): string {
+	return tags.map(serializeSeoTag).join("\n");
+}
+
+function serializeSeoTag(node: SeoTagNode): string {
+	if (node.tag === "title") {
+		return `<title>${escapeHtml(node.text ?? "")}</title>`;
+	}
+	if (node.tag === "script") {
+		const attrs = formatAttrs(node.attrs);
+		return `<script${attrs}>${node.text ?? ""}</script>`;
+	}
+	const attrs = formatAttrs(node.attrs);
+	return `<${node.tag}${attrs} />`;
+}
+
+function formatAttrs(attrs?: Record<string, string>): string {
+	if (!attrs) return "";
+	return Object.entries(attrs)
+		.map(([key, value]) => ` ${key}="${escapeAttr(value)}"`)
+		.join("");
+}
+
+/** Turn the RSS helper string into a node list (keeps one serialization path). */
+function parseSingleLinkTag(html: string): SeoTagNode[] {
+	const match = html.match(/<link\s+([^>]+?)\s*\/>/);
+	if (!match) return [];
+	const attrs: Record<string, string> = {};
+	for (const part of match[1].matchAll(/([^\s=]+)="([^"]*)"/g)) {
+		attrs[part[1]] = part[2]
+			.replace(/&quot;/g, '"')
+			.replace(/&lt;/g, "<")
+			.replace(/&gt;/g, ">")
+			.replace(/&amp;/g, "&");
+	}
+	return [{ tag: "link", attrs }];
+}
 
 function escapeHtml(text: string): string {
 	return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
