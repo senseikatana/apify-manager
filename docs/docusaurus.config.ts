@@ -32,6 +32,8 @@ const config: Config = {
       {
         entryPoints: ['../src/index.ts'],
         tsconfig: '../tsconfig.json',
+        out: './docs/api',
+        cleanOutputDir: true,
         useHTMLEncodedBrackets: true,
       },
     ],

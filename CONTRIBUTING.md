@@ -82,7 +82,7 @@ Useful scripts (prefer `yarn run <script>` when the name clashes with a Yarn bui
 | `yarn test` / `test:watch` | Vitest |
 | `yarn check` / `check:fix` | Biome check / auto-fix |
 | `yarn typecheck` | `tsc --noEmit` |
-| `yarn docs:dev` / `docs:build` / `docs:preview` | Docs site (`docs:build` runs `validate` first) |
+| `yarn docs:dev` / `docs:build` / `docs:preview` / `docs:clear` | Docs site (`docs:build` runs `validate` + clear first) |
 | `yarn release:patch` / `:minor` / `:major` | `build` → version bump → publish |
 | `yarn dev` / `start` | Express example server |
 

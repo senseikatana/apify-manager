@@ -218,11 +218,12 @@ and the client is not exported from the main barrel.
 
 ## Development tooling
 
-- `yarn build` — `tsc` to `dist/` (declarations + ESM).
-- `yarn typecheck` — `tsc --noEmit`.
-- `yarn test` / `test:watch` — Vitest (60 tests across 8 files: http,
-  logger, storage, core, rss, nuxt, seo, vue).
+- `yarn validate` — Biome + typecheck + tests (gate before build/docs/publish).
+- `yarn build` — `validate` then `tsc` → `dist/`.
+- `yarn test` / `test:watch` — Vitest.
 - `yarn check` / `check:fix` — Biome 2 lint + format.
+- `yarn docs:build` — `validate` then Docusaurus (TypeDoc API regenerates under `docs/docs/api`).
+- `yarn docs:dev` / `docs:preview` / `docs:clear` — local docs workflow.
 - `yarn dev` / `start` — the bundled Express example server.
 
 See [CONTRIBUTING.md](https://github.com/senseikatana/katanakit-js/blob/dev/CONTRIBUTING.md) for the full development contract.

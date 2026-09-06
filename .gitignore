@@ -25,6 +25,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 
+# Generated TypeDoc markdown (produced by docs build / docs:dev)
+docs/docs/api/
+
 # IntelliJ based IDEs
 .idea
 .zcode/
