@@ -54,8 +54,11 @@ export class DataUtils implements IDataUtils {
 	): T => {
 		if (!target || !source) return { ...target };
 		const output = { ...target } as Record<string, unknown>;
+		const dangerousKeys = new Set(["__proto__", "constructor", "prototype"]);
 
 		for (const key of Object.keys(source)) {
+			if (dangerousKeys.has(key)) continue;
+
 			const targetVal = target[key];
 			const sourceVal = source[key];
 

@@ -28,4 +28,17 @@ describe("LoggerService", () => {
 
 		expect(calls).toEqual([{ level: "info", message: "plain message" }]);
 	});
+
+	it("treats a lone level token as an info message", () => {
+		const calls: Array<{ level: string; message: string }> = [];
+		const strategy: LogStrategy = {
+			useOutput: (level, message) => calls.push({ level, message }),
+		};
+
+		const logger = LoggerService.getInstance();
+		logger.useSetStrategy(strategy);
+		logger.useLog("error");
+
+		expect(calls).toEqual([{ level: "info", message: "error" }]);
+	});
 });

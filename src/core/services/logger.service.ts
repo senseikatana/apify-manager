@@ -48,6 +48,12 @@ export class LoggerService {
 	} = (param1: LogLevel | string, param2?: unknown, param3?: unknown): void => {
 		const levels: LogLevel[] = ["log", "info", "warn", "error", "debug"];
 
+		// Lone level token without a message — treat as a plain info message.
+		if (levels.includes(param1 as LogLevel) && param2 === undefined) {
+			this.strategy.useOutput("info", param1);
+			return;
+		}
+
 		if (levels.includes(param1 as LogLevel)) {
 			const level = param1 as LogLevel;
 			const message = typeof param2 === "string" ? param2 : String(param2 ?? "");

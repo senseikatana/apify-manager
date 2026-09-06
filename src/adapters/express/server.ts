@@ -9,6 +9,7 @@ export default class ServerExpress {
 	private readonly app: Application;
 	private readonly port: number;
 	private readonly host: string;
+	private started = false;
 
 	private constructor(port = 3000, host = "localhost") {
 		this.app = express();
@@ -23,7 +24,14 @@ export default class ServerExpress {
 		return ServerExpress.instance;
 	}
 
+	/**
+	 * Boots middleware, routes and the HTTP listener once.
+	 * Subsequent calls are no-ops (idempotent).
+	 */
 	useStart = (): void => {
+		if (this.started) return;
+		this.started = true;
+
 		this.setupMiddlewares();
 		this.setupRoutes();
 		this.setupErrorHandling();
@@ -36,10 +44,13 @@ export default class ServerExpress {
 	useGetApp = (): Application => this.app;
 
 	private setupMiddlewares(): void {
-		// Restrict CORS to configured origins (defaults to localhost).
+		const origins = (process.env.CORS_ORIGINS?.split(",") ?? ["http://localhost:3000"])
+			.map((origin) => origin.trim())
+			.filter(Boolean);
+
 		this.app.use(
 			cors({
-				origin: process.env.CORS_ORIGINS?.split(",") ?? ["http://localhost:3000"],
+				origin: origins,
 				methods: ["GET", "POST", "PUT", "DELETE"],
 			}),
 		);

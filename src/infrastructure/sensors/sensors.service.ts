@@ -47,11 +47,11 @@ export class SensorsUtils {
 	}
 
 	async useGetFrontCamera(): Promise<MediaStream | null> {
-		return this.useGetMediaStream({ video: { facingMode: "user" }, audio: true });
+		return this.useGetMediaStream({ video: { facingMode: "user" }, audio: false });
 	}
 
 	async useGetBackCamera(): Promise<MediaStream | null> {
-		return this.useGetMediaStream({ video: { facingMode: "environment" }, audio: true });
+		return this.useGetMediaStream({ video: { facingMode: "environment" }, audio: false });
 	}
 
 	async useGetGeolocation(options?: PositionOptions): Promise<GeoPosition | null> {
@@ -101,14 +101,15 @@ export class SensorsUtils {
 	async useRequestMotionPermission(): Promise<boolean> {
 		if (!this.isBrowser()) return false;
 
+		if (typeof DeviceOrientationEvent === "undefined") {
+			return false;
+		}
+
 		const DeviceOrientationEventExtended = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
 			requestPermission?: () => Promise<string>;
 		};
 
-		if (
-			typeof DeviceOrientationEventExtended !== "undefined" &&
-			typeof DeviceOrientationEventExtended.requestPermission === "function"
-		) {
+		if (typeof DeviceOrientationEventExtended.requestPermission === "function") {
 			try {
 				const response = await DeviceOrientationEventExtended.requestPermission();
 				return response === "granted";
@@ -122,7 +123,7 @@ export class SensorsUtils {
 	}
 
 	useOnDeviceOrientation(callback: (event: DeviceOrientationEvent) => void): (() => void) | null {
-		if (!this.isBrowser()) return null;
+		if (!this.isBrowser() || typeof DeviceOrientationEvent === "undefined") return null;
 
 		window.addEventListener("deviceorientation", callback);
 

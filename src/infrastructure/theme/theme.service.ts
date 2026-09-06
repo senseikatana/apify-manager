@@ -8,6 +8,12 @@ import {
 } from "../dom/dom.service.js";
 import { useGetStorage, useRemoveStorage, useSetStorage } from "../storage/storage.service.js";
 
+const VALID_THEME_MODES: readonly ThemeMode[] = ["light", "dark", "system"];
+
+function isThemeMode(value: unknown): value is ThemeMode {
+	return typeof value === "string" && (VALID_THEME_MODES as readonly string[]).includes(value);
+}
+
 /**
  * Theme facade (Singleton) over the DOM and Storage, with a media-query listener.
  */
@@ -43,8 +49,9 @@ export class ThemeService implements IThemeService {
 		this.target = options.target ?? useGetRoot();
 		this.onChange = options.onChange;
 
-		const stored = useGetStorage(this.storageKey) as ThemeMode | null;
-		this.mode = stored ?? options.defaultMode ?? "system";
+		const stored = useGetStorage(this.storageKey);
+		const defaultMode = isThemeMode(options.defaultMode) ? options.defaultMode : "system";
+		this.mode = isThemeMode(stored) ? stored : defaultMode;
 
 		this.APPLY_THEME();
 		this.SETUP_MEDIA_QUERY_LISTENER();
@@ -53,7 +60,7 @@ export class ThemeService implements IThemeService {
 	public useSetThemeMode = (mode: ThemeMode): void => {
 		if (!this.IS_BROWSER()) return;
 
-		this.mode = mode ?? "system";
+		this.mode = isThemeMode(mode) ? mode : "system";
 		useSetStorage(this.storageKey, this.mode, "localStorage");
 		this.APPLY_THEME();
 	};

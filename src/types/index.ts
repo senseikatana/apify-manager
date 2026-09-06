@@ -113,6 +113,7 @@ export interface WorkerPoolEntry<TInput = unknown, TOutput = unknown> {
 	worker: Worker;
 	workerUrl: string;
 	func: WorkerFunc<TInput, TOutput>;
+	pending: Map<string, { reject: (reason: Error) => void; cleanup: () => void }>;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -258,14 +259,27 @@ export type FetchResult<T = unknown> =
 /** Contract of the fetch facade. */
 export interface IFetchApiManager {
 	useInit(apis: ApisConfig): void;
+	useInitApis(apis: ApisConfig): void;
 	useGetApis(): ApisConfig;
+	useGetApisConfig(): ApisConfig;
 	useBuildUrl(apiName: string, endpointName: string, options?: UrlOptions): string;
+	useBuildApiUrl(apiName: string, endpointName: string, options?: UrlOptions): string;
 	useFetch<T = unknown>(
 		apiName: string,
 		endpointName: string,
 		options?: FetchOptions,
 	): Promise<FetchResult<T>>;
+	useFetchApi<T = unknown>(
+		apiName: string,
+		endpointName: string,
+		options?: FetchOptions,
+	): Promise<FetchResult<T>>;
 	useGet<T = unknown>(
+		apiName: string,
+		endpointName: string,
+		urlOptions?: UrlOptions,
+	): Promise<FetchResult<T>>;
+	useGetApi<T = unknown>(
 		apiName: string,
 		endpointName: string,
 		urlOptions?: UrlOptions,
@@ -343,6 +357,8 @@ export interface IConverterService {
 
 /** Contract for a crypto strategy. */
 export interface ICryptoStrategy {
+	useHash(plainText: string, salt?: string): Promise<string>;
+	/** @deprecated Use {@link useHash}. */
 	useEncrypt(plainText: string, salt?: string): Promise<string>;
 }
 
@@ -394,7 +410,10 @@ export interface IReactiveService {
 		fallbackValue: T,
 		target?: StorageTarget,
 	): [SignalGetter<T>, SignalSetter<T>];
-	useCreateDebouncedSignal<T>(initialValue: T, delayMs?: number): [SignalGetter<T>, SignalSetter<T>];
+	useCreateDebouncedSignal<T>(
+		initialValue: T,
+		delayMs?: number,
+	): [SignalGetter<T>, SignalSetter<T> & { useCancel: () => void }];
 	useCreateBatch(): (callback: () => void) => void;
 }
 

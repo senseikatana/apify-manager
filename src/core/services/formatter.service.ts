@@ -81,7 +81,7 @@ export class ConverterService implements IConverterService {
 		this.formatter.useFormatNumber(miles / 0.62137, locale, digits);
 
 	public useToMiles = (km: number, locale: Locale = "en", digits = 2): string =>
-		this.formatter.useFormatNumber(km * 1.60934, locale, digits);
+		this.formatter.useFormatNumber(km / 1.60934, locale, digits);
 
 	public useToInches = (cm: number, locale: Locale = "en", digits = 2): string =>
 		this.formatter.useFormatNumber(cm / 2.54, locale, digits);
@@ -117,3 +117,6 @@ export const {
 	useLowerCase,
 	useCapitalize,
 }: FormatterService = FormatterService.getInstance();
+
+
+export

@@ -173,11 +173,11 @@ export default class ReactiveService implements IReactiveService {
 	public useCreateDebouncedSignal = <T>(
 		initialValue: T,
 		delayMs = 300,
-	): [SignalGetter<T>, SignalSetter<T>] => {
+	): [SignalGetter<T>, SignalSetter<T> & { useCancel: () => void }] => {
 		const [get, set] = this.useCreateSignal<T>(initialValue);
 		let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-		const debouncedSet: SignalSetter<T> = (nextValue) => {
+		const debouncedSet: SignalSetter<T> & { useCancel: () => void } = ((nextValue) => {
 			if (timeoutId !== undefined) {
 				clearTimeout(timeoutId);
 			}
@@ -186,6 +186,13 @@ export default class ReactiveService implements IReactiveService {
 				set(nextValue);
 				timeoutId = undefined;
 			}, delayMs);
+		}) as SignalSetter<T> & { useCancel: () => void };
+
+		debouncedSet.useCancel = () => {
+			if (timeoutId !== undefined) {
+				clearTimeout(timeoutId);
+				timeoutId = undefined;
+			}
 		};
 
 		return [get, debouncedSet];
@@ -193,17 +200,20 @@ export default class ReactiveService implements IReactiveService {
 
 	public useCreateBatch = (): ((callback: () => void) => void) => {
 		return (callback: () => void) => {
+			const wasBatching = this.isBatching;
 			this.isBatching = true;
 			try {
 				callback();
 			} catch (error) {
 				useLog("error", "[createBatch] Batch block error:", error);
 			} finally {
-				this.isBatching = false;
-				const queue = Array.from(this.batchQueue);
-				this.batchQueue.clear();
-				for (const notify of queue) {
-					notify();
+				if (!wasBatching) {
+					this.isBatching = false;
+					const queue = Array.from(this.batchQueue);
+					this.batchQueue.clear();
+					for (const notify of queue) {
+						notify();
+					}
 				}
 			}
 		};

@@ -1,6 +1,6 @@
-import { isRef, type MaybeRef, type Ref, ref, shallowRef, unref, watch } from "vue";
+import { isRef, type MaybeRef, onUnmounted, type Ref, ref, shallowRef, unref, watch } from "vue";
 
-import { useGet } from "../../core/services/http.service.js";
+import { useFetch } from "../../core/services/http.service.js";
 import type { ApiError, FetchResult, UrlOptions } from "../../types/index.js";
 
 /**
@@ -18,14 +18,17 @@ export interface KatanaFetchState<T> {
 }
 
 /**
- * Vue 3 composable that wraps KatanaKit's `useGet` with the reactivity system.
+ * Vue 3 composable that wraps KatanaKit's HTTP GET with the reactivity system.
  * It bridges the Safe Result pattern to idiomatic Vue state (`data`, `error`,
  * `loading`) and never throws on HTTP errors.
+ *
+ * Stale responses are ignored via a request version counter and AbortController.
+ * In-flight requests are aborted on unmount when `onUnmounted` is available.
  *
  * When `options` is a Vue `Ref`, the request re-runs automatically whenever the
  * ref changes (deep watch), so URL params or query params can drive refetching.
  *
- * @param apiName - Name of the registered API (see `useInit`).
+ * @param apiName - Name of the registered API (see `useInitApis`).
  * @param endpointName - Name of the endpoint inside that API.
  * @param options - Optional `UrlOptions` (path/query params), plain or reactive.
  * @returns Reactive `{ data, error, loading, refetch }`.
@@ -50,16 +53,40 @@ export function useKatanaFetch<T>(
 	const error = ref<ApiError | null>(null);
 	const loading = ref(true);
 
+	let requestVersion = 0;
+	let activeController: AbortController | null = null;
+	let disposed = false;
+
 	const refetch = async (): Promise<void> => {
+		const version = ++requestVersion;
+		activeController?.abort();
+		const controller = new AbortController();
+		activeController = controller;
+
 		loading.value = true;
 		error.value = null;
 
-		const result: FetchResult<T> = await useGet<T>(apiName, endpointName, unref(options));
+		const result: FetchResult<T> = await useFetch<T>(apiName, endpointName, {
+			method: "GET",
+			urlOptions: unref(options),
+			signal: controller.signal,
+		});
+
+		if (disposed || version !== requestVersion) {
+			return;
+		}
 
 		if (result.ok) {
 			data.value = result.data;
+			error.value = null;
 		} else {
-			error.value = result.error;
+			// Ignore abort errors from superseded / unmounted requests.
+			const aborted =
+				controller.signal.aborted ||
+				/abort/i.test(result.error.message);
+			if (!aborted) {
+				error.value = result.error;
+			}
 		}
 
 		loading.value = false;
@@ -67,7 +94,19 @@ export function useKatanaFetch<T>(
 
 	// Refetch automatically when a reactive options ref changes.
 	if (isRef(options)) {
-		watch(options, refetch, { deep: true });
+		watch(options, () => {
+			void refetch();
+		}, { deep: true });
+	}
+
+	// Dispose on unmount when running inside a component setup.
+	try {
+		onUnmounted(() => {
+			disposed = true;
+			activeController?.abort();
+		});
+	} catch {
+		// Outside of a component setup context — skip lifecycle hook.
 	}
 
 	// Initial fetch on setup.

@@ -24,11 +24,30 @@ export class FetchApiManager implements IFetchApiManager {
 		return FetchApiManager.instance;
 	}
 
+	/**
+	 * Registers (merges) API definitions into the client registry.
+	 * Prefer the clearer alias {@link useInitApis}.
+	 */
 	public useInit = (apis: ApisConfig): void => {
 		this.apis = { ...this.apis, ...apis };
 	};
 
-	public useGetApis = (): ApisConfig => this.apis;
+	/**
+	 * Registers (merges) API definitions into the client registry.
+	 */
+	public useInitApis = (apis: ApisConfig): void => {
+		this.useInit(apis);
+	};
+
+	/**
+	 * Returns a shallow copy of the registered APIs (safe to mutate locally).
+	 */
+	public useGetApis = (): ApisConfig => ({ ...this.apis });
+
+	/**
+	 * Alias for {@link useGetApis}.
+	 */
+	public useGetApisConfig = (): ApisConfig => this.useGetApis();
 
 	private GET_API_ENTRY = (apiName: string): ApiEntry => {
 		const api = this.apis[apiName];
@@ -79,6 +98,35 @@ export class FetchApiManager implements IFetchApiManager {
 		return url.toString();
 	};
 
+	/**
+	 * Alias for {@link useBuildUrl}.
+	 */
+	public useBuildApiUrl = (
+		apiName: string,
+		endpointName: string,
+		options: UrlOptions = {},
+	): string => this.useBuildUrl(apiName, endpointName, options);
+
+	private READ_BODY = async (response: Response): Promise<unknown> => {
+		const text = await response.text();
+		if (!text) return null;
+
+		const contentType = response.headers.get("content-type") ?? "";
+		if (contentType.includes("application/json")) {
+			try {
+				return JSON.parse(text) as unknown;
+			} catch {
+				return text;
+			}
+		}
+
+		try {
+			return JSON.parse(text) as unknown;
+		} catch {
+			return text;
+		}
+	};
+
 	public useFetch = async <T = unknown>(
 		apiName: string,
 		endpointName: string,
@@ -88,15 +136,25 @@ export class FetchApiManager implements IFetchApiManager {
 
 		try {
 			url = this.useBuildUrl(apiName, endpointName, urlOptions);
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			return {
+				data: null,
+				error: {
+					message: `Config Error: ${message}`,
+					status: 0,
+				},
+				url,
+				status: 0,
+				ok: false,
+			};
+		}
+
+		try {
 			const response = await fetch(url, init);
 
 			if (!response.ok) {
-				let errorDetails: unknown;
-				try {
-					errorDetails = await response.json();
-				} catch {
-					errorDetails = await response.text();
-				}
+				const errorDetails = await this.READ_BODY(response);
 
 				return {
 					data: null,
@@ -111,12 +169,21 @@ export class FetchApiManager implements IFetchApiManager {
 				};
 			}
 
-			const contentType = response.headers.get("content-type");
-			const isJson = contentType?.includes("application/json");
-			const data = isJson ? ((await response.json()) as T) : ((await response.text()) as unknown as T);
+			// 204 No Content and empty bodies are valid success responses.
+			if (response.status === 204) {
+				return {
+					data: null as T,
+					error: null,
+					url: response.url || url,
+					status: 204,
+					ok: true,
+				};
+			}
+
+			const body = await this.READ_BODY(response);
 
 			return {
-				data,
+				data: body as T,
 				error: null,
 				url: response.url || url,
 				status: response.status,
@@ -137,12 +204,30 @@ export class FetchApiManager implements IFetchApiManager {
 		}
 	};
 
+	/**
+	 * Alias for {@link useFetch}.
+	 */
+	public useFetchApi = async <T = unknown>(
+		apiName: string,
+		endpointName: string,
+		options?: FetchOptions,
+	): Promise<FetchResult<T>> => this.useFetch<T>(apiName, endpointName, options);
+
 	public useGet = async <T = unknown>(
 		apiName: string,
 		endpointName: string,
 		urlOptions?: UrlOptions,
 	): Promise<FetchResult<T>> =>
 		this.useFetch<T>(apiName, endpointName, { method: "GET", urlOptions });
+
+	/**
+	 * Alias for {@link useGet}.
+	 */
+	public useGetApi = async <T = unknown>(
+		apiName: string,
+		endpointName: string,
+		urlOptions?: UrlOptions,
+	): Promise<FetchResult<T>> => this.useGet<T>(apiName, endpointName, urlOptions);
 
 	public usePost = async <T = unknown>(
 		apiName: string,
@@ -181,14 +266,169 @@ export class FetchApiManager implements IFetchApiManager {
 		});
 }
 
-// Singleton instance and destructured exports.
-export const {
-	useFetch,
-	useGetApis,
-	useInit,
-	useGet,
-	usePost,
-	useDelete,
-	usePut,
-	useBuildUrl,
-}: FetchApiManager = FetchApiManager.getInstance();
+const http = FetchApiManager.getInstance();
+
+/**
+ * Registers (merges) API definitions into the client registry.
+ *
+ * @example
+ * ```ts
+ * import { useInitApis } from "katanakit-js";
+ *
+ * useInitApis({
+ *   pokeapi: {
+ *     baseUri: "https://pokeapi.co/api/v2",
+ *     endpoints: { pokemonById: "/pokemon/:id/" },
+ *   },
+ * });
+ * ```
+ */
+export function useInitApis(apis: ApisConfig): void {
+	http.useInitApis(apis);
+}
+
+/**
+ * @deprecated Use {@link useInitApis} for a clearer name.
+ */
+export function useInit(apis: ApisConfig): void {
+	http.useInit(apis);
+}
+
+/**
+ * Returns a shallow copy of the registered APIs.
+ *
+ * @example
+ * ```ts
+ * import { useGetApisConfig } from "katanakit-js";
+ * const apis = useGetApisConfig();
+ * ```
+ */
+export function useGetApisConfig(): ApisConfig {
+	return http.useGetApisConfig();
+}
+
+/**
+ * @deprecated Prefer {@link useGetApisConfig}.
+ */
+export function useGetApis(): ApisConfig {
+	return http.useGetApis();
+}
+
+/**
+ * Builds a safe http(s) URL from a registered API + endpoint.
+ *
+ * @example
+ * ```ts
+ * import { useBuildApiUrl } from "katanakit-js";
+ * const url = useBuildApiUrl("pokeapi", "pokemonById", { params: { id: 25 } });
+ * ```
+ */
+export function useBuildApiUrl(
+	apiName: string,
+	endpointName: string,
+	options?: UrlOptions,
+): string {
+	return http.useBuildApiUrl(apiName, endpointName, options);
+}
+
+/**
+ * @deprecated Prefer {@link useBuildApiUrl}.
+ */
+export function useBuildUrl(
+	apiName: string,
+	endpointName: string,
+	options?: UrlOptions,
+): string {
+	return http.useBuildUrl(apiName, endpointName, options);
+}
+
+/**
+ * Fetches a registered endpoint and returns a Safe Result.
+ *
+ * @example
+ * ```ts
+ * import { useFetchApi } from "katanakit-js";
+ * const result = await useFetchApi("pokeapi", "pokemonById", {
+ *   method: "GET",
+ *   urlOptions: { params: { id: 25 } },
+ * });
+ * if (result.ok) console.log(result.data);
+ * ```
+ */
+export function useFetchApi<T = unknown>(
+	apiName: string,
+	endpointName: string,
+	options?: FetchOptions,
+): Promise<FetchResult<T>> {
+	return http.useFetchApi<T>(apiName, endpointName, options);
+}
+
+/**
+ * @deprecated Prefer {@link useFetchApi}.
+ */
+export function useFetch<T = unknown>(
+	apiName: string,
+	endpointName: string,
+	options?: FetchOptions,
+): Promise<FetchResult<T>> {
+	return http.useFetch<T>(apiName, endpointName, options);
+}
+
+/**
+ * GET helper over a registered API endpoint.
+ *
+ * @example
+ * ```ts
+ * import { useGetApi } from "katanakit-js";
+ * const result = await useGetApi<{ name: string }>("pokeapi", "pokemonById", {
+ *   params: { id: 25 },
+ * });
+ * ```
+ */
+export function useGetApi<T = unknown>(
+	apiName: string,
+	endpointName: string,
+	urlOptions?: UrlOptions,
+): Promise<FetchResult<T>> {
+	return http.useGetApi<T>(apiName, endpointName, urlOptions);
+}
+
+/**
+ * @deprecated Prefer {@link useGetApi}.
+ */
+export function useGet<T = unknown>(
+	apiName: string,
+	endpointName: string,
+	urlOptions?: UrlOptions,
+): Promise<FetchResult<T>> {
+	return http.useGet<T>(apiName, endpointName, urlOptions);
+}
+
+/** POST helper over a registered API endpoint. */
+export function usePost<T = unknown>(
+	apiName: string,
+	endpointName: string,
+	body?: unknown,
+	urlOptions?: UrlOptions,
+): Promise<FetchResult<T>> {
+	return http.usePost<T>(apiName, endpointName, body, urlOptions);
+}
+
+/** PUT helper over a registered API endpoint. */
+export function usePut<T = unknown>(
+	apiName: string,
+	endpointName: string,
+	body?: unknown,
+	urlOptions?: UrlOptions,
+): Promise<FetchResult<T>> {
+	return http.usePut<T>(apiName, endpointName, body, urlOptions);
+}
+
+/** DELETE helper over a registered API endpoint. */
+export function useDelete<T = unknown>(
+	apiName: string,
+	endpointName: string,
+	urlOptions?: UrlOptions,
+): Promise<FetchResult<T>> {
+	return http.useDelete<T>(apiName, endpointName, urlOptions);
+}

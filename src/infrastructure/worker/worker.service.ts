@@ -3,10 +3,27 @@ import type { WorkerFunc, WorkerPoolEntry } from "../../types/index.js";
 /**
  * Worker facade (Singleton + Pool pattern) for running pure functions off the
  * main thread, with an SSR/main-thread fallback when Worker is unavailable.
+ *
+ * @example
+ * ```ts
+ * import WorkerService from "katanakit-js";
+ * // or: import { WorkerService } from "katanakit-js";
+ *
+ * const workers = WorkerService.getInstance();
+ *
+ * // One-shot: pass a pure function + input data
+ * const doubled = await workers.useRun((n: number) => n * 2, 21);
+ *
+ * // Pool: create once, run many times
+ * workers.useCreatePool("heavy", (n: number) => n ** 2);
+ * const squared = await workers.useRunPool("heavy", 9);
+ * workers.useTerminate("heavy");
+ * ```
  */
 export default class WorkerService {
 	private static instance: WorkerService;
-	private pools: Map<string, WorkerPoolEntry> = new Map();
+	// Heterogeneous pool registry — each entry carries its own func types at runtime.
+	private pools = new Map<string, WorkerPoolEntry>();
 
 	private constructor() {}
 
@@ -23,13 +40,13 @@ export default class WorkerService {
 
 	/**
 	 * Runs a pure function in a one-shot Worker and destroys it afterwards.
+	 * Async worker functions are awaited (Promise resolved before postMessage).
 	 */
 	async useRun<TInput, TOutput>(
 		workerFunc: WorkerFunc<TInput, TOutput>,
 		data: TInput,
 	): Promise<TOutput> {
 		if (!WorkerService.useIsSupported()) {
-			// SSR/Node fallback: run on the main thread.
 			return Promise.resolve(workerFunc(data));
 		}
 
@@ -50,15 +67,26 @@ export default class WorkerService {
 
 			try {
 				const funcString = workerFunc.toString();
-				const blob = new Blob([`self.onmessage = (e) => self.postMessage((${funcString})(e.data))`], {
-					type: "application/javascript",
-				});
+				const blob = new Blob(
+					[
+						`self.onmessage = (e) => {
+							Promise.resolve((${funcString})(e.data))
+								.then((payload) => self.postMessage({ ok: true, payload }))
+								.catch((err) => self.postMessage({ ok: false, error: String(err && err.message ? err.message : err) }));
+						}`,
+					],
+					{ type: "application/javascript" },
+				);
 				workerUrl = URL.createObjectURL(blob);
 				worker = new Worker(workerUrl);
 
 				worker.onmessage = (event) => {
 					cleanup();
-					resolve(event.data);
+					if (event.data?.ok === false) {
+						reject(new Error(event.data.error ?? "Worker function failed"));
+						return;
+					}
+					resolve(event.data?.payload as TOutput);
 				};
 				worker.onerror = (error) => {
 					cleanup();
@@ -81,7 +109,15 @@ export default class WorkerService {
 	 * Creates a reusable Worker pool under a unique key.
 	 */
 	useCreatePool<TInput, TOutput>(key: string, workerFunc: WorkerFunc<TInput, TOutput>): this {
-		if (!WorkerService.useIsSupported()) return this;
+		if (!WorkerService.useIsSupported()) {
+			this.pools.set(key, {
+				worker: null as unknown as Worker,
+				workerUrl: "",
+				func: workerFunc as WorkerFunc,
+				pending: new Map(),
+			});
+			return this;
+		}
 
 		if (this.pools.has(key)) {
 			this.useTerminate(key);
@@ -90,7 +126,16 @@ export default class WorkerService {
 		const funcString = workerFunc.toString();
 		const blob = new Blob(
 			[
-				`self.onmessage = (e) => self.postMessage({ __taskId: e.data.__taskId, payload: (${funcString})(e.data.payload) })`,
+				`self.onmessage = (e) => {
+					const taskId = e.data.__taskId;
+					Promise.resolve((${funcString})(e.data.payload))
+						.then((payload) => self.postMessage({ __taskId: taskId, ok: true, payload }))
+						.catch((err) => self.postMessage({
+							__taskId: taskId,
+							ok: false,
+							error: String(err && err.message ? err.message : err),
+						}));
+				}`,
 			],
 			{ type: "application/javascript" },
 		);
@@ -100,14 +145,15 @@ export default class WorkerService {
 		this.pools.set(key, {
 			worker,
 			workerUrl,
-			func: workerFunc,
-		} as WorkerPoolEntry);
+			func: workerFunc as WorkerFunc,
+			pending: new Map(),
+		});
 		return this;
 	}
 
 	/**
-	 * Runs a task on an existing pool. Tasks are queued to prevent race conditions
-	 * when multiple calls target the same pool key concurrently.
+	 * Runs a task on an existing pool. Tasks are correlated by `__taskId`.
+	 * Errors use `addEventListener` so concurrent tasks do not stomp handlers.
 	 */
 	useRunPool<TInput, TOutput>(key: string, data: TInput): Promise<TOutput> {
 		const entry = this.pools.get(key) as WorkerPoolEntry<TInput, TOutput> | undefined;
@@ -120,35 +166,60 @@ export default class WorkerService {
 			return Promise.resolve(entry.func(data));
 		}
 
-		// Queue the task to prevent onmessage race conditions.
 		const taskId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 		return new Promise((resolve, reject) => {
-			const handler = (event: MessageEvent) => {
-				if (event.data?.__taskId === taskId) {
-					entry.worker.removeEventListener("message", handler);
-					resolve(event.data.payload as TOutput);
+			const onMessage = (event: MessageEvent) => {
+				if (event.data?.__taskId !== taskId) return;
+				cleanup();
+				if (event.data.ok === false) {
+					reject(new Error(event.data.error ?? "Worker function failed"));
+					return;
 				}
+				resolve(event.data.payload as TOutput);
 			};
 
-			entry.worker.addEventListener("message", handler);
-			entry.worker.onerror = (error) => {
-				entry.worker.removeEventListener("message", handler);
+			const onError = (error: ErrorEvent) => {
+				cleanup();
 				reject(new Error(`Worker error: ${error.message}`));
 			};
+
+			const cleanup = () => {
+				entry.worker.removeEventListener("message", onMessage);
+				entry.worker.removeEventListener("error", onError);
+				entry.pending.delete(taskId);
+			};
+
+			entry.pending.set(taskId, {
+				reject: (reason) => reject(reason),
+				cleanup,
+			});
+
+			entry.worker.addEventListener("message", onMessage);
+			entry.worker.addEventListener("error", onError);
 			entry.worker.postMessage({ __taskId: taskId, payload: data });
 		});
 	}
 
 	/**
-	 * Terminates a specific pool.
+	 * Terminates a specific pool and rejects any in-flight tasks.
 	 */
 	useTerminate(key: string): this {
 		const entry = this.pools.get(key);
 		if (!entry) return this;
 
-		entry.worker.terminate();
-		URL.revokeObjectURL(entry.workerUrl);
+		for (const pending of entry.pending.values()) {
+			pending.cleanup();
+			pending.reject(new Error(`Worker pool "${key}" was terminated`));
+		}
+		entry.pending.clear();
+
+		if (WorkerService.useIsSupported() && entry.worker) {
+			entry.worker.terminate();
+			if (entry.workerUrl) {
+				URL.revokeObjectURL(entry.workerUrl);
+			}
+		}
 		this.pools.delete(key);
 		return this;
 	}

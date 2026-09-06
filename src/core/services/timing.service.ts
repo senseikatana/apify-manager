@@ -25,10 +25,12 @@ export default class TimingService {
 	public useSleep = (ms: number): Promise<void> => this.useDelay(ms);
 
 	public useSetTimeout = <T>(callback: () => T | Promise<T>, ms: number): TimeoutControl<T> => {
-		let timerId: TimerId;
+		let timerId: TimerId | undefined;
 		let isCancelled = false;
+		let rejectFn: ((reason?: unknown) => void) | undefined;
 
 		const promise = new Promise<T>((resolve, reject) => {
+			rejectFn = reject;
 			timerId = setTimeout(async () => {
 				if (isCancelled) return;
 
@@ -42,8 +44,12 @@ export default class TimingService {
 		});
 
 		const cancel = () => {
+			if (isCancelled) return;
 			isCancelled = true;
-			clearTimeout(timerId);
+			if (timerId !== undefined) {
+				clearTimeout(timerId);
+			}
+			rejectFn?.(new Error("Timeout cancelled"));
 		};
 
 		return { promise, cancel };
@@ -137,20 +143,25 @@ export default class TimingService {
 		};
 	};
 
+	/**
+	 * Leading-edge debounce: fires immediately on the first call, then ignores
+	 * calls until `delayMs` of quiet. Additional calls during the wait window
+	 * schedule a single trailing invocation with the latest arguments.
+	 */
 	public useDebounceImmediate = <T extends (...args: unknown[]) => unknown>(
 		func: T,
 		delayMs: number,
 	): ((...args: Parameters<T>) => void) => {
 		let timeoutId: TimerId | undefined;
-		let lastCallTime: number | undefined;
+		let invoked = false;
+		let lastArgs: Parameters<T> | null = null;
 
 		return (...args: Parameters<T>) => {
-			const now = Date.now();
-			const isFirstCall = lastCallTime === undefined;
+			lastArgs = args;
 
-			lastCallTime = now;
-
-			if (isFirstCall) {
+			if (!invoked) {
+				invoked = true;
+				lastArgs = null;
 				try {
 					func(...args);
 				} catch (error) {
@@ -163,15 +174,16 @@ export default class TimingService {
 			}
 
 			timeoutId = setTimeout(() => {
-				if (Date.now() - Number(lastCallTime) >= delayMs) {
+				if (lastArgs) {
 					try {
-						func(...args);
+						func(...lastArgs);
 					} catch (error) {
 						useLog("error", "[debounceImmediate] Callback error:", error);
 					}
 				}
+				invoked = false;
+				lastArgs = null;
 				timeoutId = undefined;
-				lastCallTime = undefined;
 			}, delayMs);
 		};
 	};
@@ -248,16 +260,34 @@ export default class TimingService {
 		}
 	};
 
+	/**
+	 * Races a promise against a timeout. Clears the timer when the promise wins
+	 * so the timeout rejection cannot become an unhandled rejection.
+	 */
 	public useRace = async <T>(
 		promise: Promise<T>,
 		timeoutMs: number,
 		errorMessage = "Operation timed out",
 	): Promise<T> => {
+		let timeoutId: TimerId | undefined;
+		let settled = false;
+
 		const timeoutPromise = new Promise<never>((_, reject) => {
-			setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+			timeoutId = setTimeout(() => {
+				if (!settled) {
+					reject(new Error(errorMessage));
+				}
+			}, timeoutMs);
 		});
 
-		return Promise.race([promise, timeoutPromise]);
+		try {
+			return await Promise.race([promise, timeoutPromise]);
+		} finally {
+			settled = true;
+			if (timeoutId !== undefined) {
+				clearTimeout(timeoutId);
+			}
+		}
 	};
 }
 

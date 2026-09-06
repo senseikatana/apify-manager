@@ -27,7 +27,7 @@ You can also load KatanaKit directly from a CDN without a bundler:
 
 ```html
 <script type="module">
-  import { useGet, useInit } from "https://cdn.jsdelivr.net/npm/katanakit-js@latest/dist/index.js";
+  import { useGetApi, useInitApis } from "https://cdn.jsdelivr.net/npm/katanakit-js@latest/dist/index.js";
 </script>
 ```
 
@@ -39,13 +39,14 @@ You can also load KatanaKit directly from a CDN without a bundler:
 ## Import entry points
 
 ```ts
-// Main barrel — everything except framework adapters
-import { useGet, useLog, useSetStorage } from "katanakit-js";
+// Main barrel — everything except framework-heavy adapters
+import { useGetApi, useLog, useSetStorage } from "katanakit-js";
 
 // Framework subpaths
 import { useUnwrap } from "katanakit-js/adapters/nuxt";
 import { useKatanaFetch } from "katanakit-js/adapters/vue";
 import { ServerExpress } from "katanakit-js/adapters/express";
+import { RssService } from "katanakit-js/adapters/astro";
 ```
 
 ---
@@ -58,9 +59,10 @@ data with a discriminated union result.
 ### Register APIs
 
 ```ts
-import { useInit } from "katanakit-js";
+import { useInitApis } from "katanakit-js";
+// Legacy alias: useInit (deprecated)
 
-useInit({
+useInitApis({
   pokeapi: {
     baseUri: "https://pokeapi.co/api/v2",
     endpoints: {
@@ -82,9 +84,10 @@ useInit({
 ### Build URLs
 
 ```ts
-import { useBuildUrl } from "katanakit-js";
+import { useBuildApiUrl } from "katanakit-js";
+// Legacy alias: useBuildUrl (deprecated)
 
-const url = useBuildUrl("pokeapi", "pokemonById", {
+const url = useBuildApiUrl("pokeapi", "pokemonById", {
   params: { id: "pikachu" },
 });
 // => "https://pokeapi.co/api/v2/pokemon/pikachu/"
@@ -93,7 +96,8 @@ const url = useBuildUrl("pokeapi", "pokemonById", {
 ### GET with Safe Result
 
 ```ts
-import { useGet } from "katanakit-js";
+import { useGetApi } from "katanakit-js";
+// Legacy alias: useGet (deprecated)
 
 interface Pokemon {
   name: string;
@@ -101,7 +105,7 @@ interface Pokemon {
   types: { type: { name: string } }[];
 }
 
-const result = await useGet<Pokemon>("pokeapi", "pokemonById", {
+const result = await useGetApi<Pokemon>("pokeapi", "pokemonById", {
   params: { id: 25 },
 });
 
@@ -187,21 +191,24 @@ LoggerService.getInstance().useSetStrategy(telemetryStrategy);
 ## Storage — `StorageService`
 
 SSR-safe: when `window` is unavailable, an in-memory fallback is used.
+Wrap request handlers with `useRunStorageScope` so values persist within a
+request without leaking across SSR requests.
 
 ```ts
-import { useSetStorage, useGetStorage, useRemoveStorage, useClearStorage } from "katanakit-js";
+import {
+  useSetStorage, useGetStorage, useRemoveStorage, useClearStorage, useRunStorageScope,
+} from "katanakit-js";
 
-// Set (JSON-serialized)
-useSetStorage("user", { name: "John", role: "admin" });
-useSetStorage("theme", "dark");
+useRunStorageScope(() => {
+  useSetStorage("user", { name: "John", role: "admin" });
+  useSetStorage("theme", "dark");
 
-// Get (typed)
-const user = useGetStorage<{ name: string; role: string }>("user");
-const theme = useGetStorage<string>("theme"); // "dark"
+  const user = useGetStorage<{ name: string; role: string }>("user");
+  const theme = useGetStorage<string>("theme"); // "dark"
 
-// Remove / Clear
-useRemoveStorage("theme");
-useClearStorage();
+  useRemoveStorage("theme");
+  useClearStorage();
+});
 ```
 
 ---
@@ -256,17 +263,17 @@ console.log(count()); // 0
 setCount(5);
 console.log(count()); // 5
 
-// Effect (runs when dependencies change)
+// Effect (runs when dependencies change — pass signal getters)
 useCreateEffect(() => {
   console.log("Count changed:", count());
-});
+}, [count]);
 
 // Memo (derived value)
-const doubled = useCreateMemo(() => count() * 2);
+const doubled = useCreateMemo(() => count() * 2, [count]);
 
 // Toggle
-const [isOpen, toggleOpen] = useCreateToggle(false);
-toggleOpen(); // isOpen() === true
+const [isOpen, { useToggle }] = useCreateToggle(false);
+useToggle(); // isOpen() === true
 
 // Storage-persisted signal
 const [theme, setTheme] = useCreateStorageSignal("theme", "light");
@@ -281,18 +288,17 @@ const [search, setSearch] = useCreateDebouncedSignal("", 300);
 
 ```ts
 import {
-  useFormatNumber, useFormatCurrency, useFormatDate,
+  useFormatNumber, useFormatCurrency,
   useCapitalize, useUpperCase, useLowerCase, useJsonStringify,
 } from "katanakit-js";
 
-useFormatNumber(1234567.89, "de-DE");     // "1.234.567,89"
-useFormatCurrency(99.99, "USD", "en-US"); // "$99.99"
-useFormatDate(new Date(), "en-US", { dateStyle: "full" });
+useFormatNumber(1234567.89, "de-DE");
+useFormatCurrency({ amount: 99.99, currency: "USD", locale: "en-US" });
 
 useCapitalize("hello world");   // "Hello world"
 useUpperCase("hello");          // "HELLO"
 useLowerCase("HELLO");          // "hello"
-useJsonStringify({ a: 1 }, 2);  // pretty-printed JSON
+useJsonStringify({ a: 1 });
 ```
 
 ---
@@ -304,17 +310,15 @@ Decorates `FormatterService` with unit conversions.
 ```ts
 import {
   useToCelsius, useToFahrenheit, useToMiles, useToKilos,
-  useToRem, useToPx, useToCm, useToInches,
+  useToCm, useToInches,
 } from "katanakit-js";
 
-useToCelsius(212);       // 100
-useToFahrenheit(100);    // 212
-useToMiles(10);           // 6.21371
-useToKilos(6.21);         // 9.99402
-useToRem(16);             // 1
-useToPx(1.5);             // 24
-useToCm(1);               // 0.3937
-useToInches(2.54);        // 1
+useToCelsius(212);       // "100.00"
+useToFahrenheit(100);    // "212.00"
+useToMiles(10);          // ~"6.21" (km → miles)
+useToKilos(10);          // pounds → kilos
+useToCm(1);              // inches → cm
+useToInches(2.54);       // cm → inches
 ```
 
 ---
@@ -335,7 +339,7 @@ useBadRequest("Invalid email");
 useUnauthorized("Token expired");
 useForbidden("Insufficient permissions");
 useInternal("Database error");
-useCustom(422, "Validation failed");
+useCustom("Validation failed", 422);
 ```
 
 ---
@@ -343,13 +347,14 @@ useCustom(422, "Validation failed");
 ## Generator — `GeneratorService`
 
 ```ts
-import { useUuid, useSlugify, useNumericId, useToken, useEncrypt } from "katanakit-js";
+import { useUuid, useSlugify, useNumericId, useToken, useHash } from "katanakit-js";
+// Legacy alias: useEncrypt → useHash (PBKDF2, not encryption)
 
-useUuid();               // "550e8400-e29b-41d4-a716-446655440000"
+useUuid();                  // "550e8400-e29b-41d4-a716-446655440000"
 useSlugify("Hello World!"); // "hello-world"
-useNumericId();           // 8392017465
-useToken(32);             // "a3f8b2c1d4e5..." (random hex)
-await useEncrypt("data"); // encrypted string
+useNumericId();             // incremental integer
+useToken();                 // 6-digit number (100000–999999)
+await useHash("secret");    // "salt:pbkdf2Hex" (async PBKDF2-SHA512)
 ```
 
 ---
@@ -359,18 +364,17 @@ await useEncrypt("data"); // encrypted string
 Uses the Temporal API via `@js-temporal/polyfill`.
 
 ```ts
-import { useNow, useFormat, useAddDays, useIsBefore, useDiff, useLastDayOfMonth } from "katanakit-js";
+import {
+  useNow, useFormat, useAddDays, useIsBefore, useDiff, useLastDayOfMonth,
+} from "katanakit-js";
 
-const now = useNow();
-useFormat(now, "yyyy-MM-dd");     // "2026-09-05"
+const now = useNow();                 // "2026-09-06" (ISO PlainDate string)
+useFormat(now, "en", { dateStyle: "medium" });
 
-const future = useAddDays(now, 30);
-useIsBefore(now, future);          // true
-
-const duration = useDiff(future, now);
-console.log(duration.days);        // 30
-
-useLastDayOfMonth(now);            // 30
+const future = useAddDays(now, 30);   // ISO date string
+useIsBefore(now, future);             // true
+useDiff(now, future);                 // "0 years, 0 months and 30 days"
+useLastDayOfMonth(now);               // last day of month as ISO string
 ```
 
 ---
@@ -380,17 +384,10 @@ useLastDayOfMonth(now);            // 30
 ```ts
 import { GeometryUtils } from "katanakit-js";
 
-const { useCircle, useSphere, useDistance, useIntersect } = GeometryUtils.getInstance();
-
-const circle = useCircle(5);
-console.log(circle.area);       // 78.54
-console.log(circle.perimeter);  // 31.42
-
-const sphere = useSphere(3);
-console.log(sphere.volume);     // 113.10
-
-useDistance({ x: 0, y: 0 }, { x: 3, y: 4 }); // 5
-useIntersect(rectA, rectB);                     // true/false
+GeometryUtils.area.useCircle(5);              // "78.54"
+GeometryUtils.perimeter.useCircle(5);         // "31.42"
+GeometryUtils.volume.useSphere(3);            // "113.10"
+GeometryUtils.area.useRectangle(5, 10, { unit: "cm" }); // "50.00 cm"
 ```
 
 ---
@@ -403,32 +400,27 @@ import {
   useDebounce, useThrottle, useRepeat, useRace,
 } from "katanakit-js";
 
-// Promise-based delay
-await useDelay(1000); // waits 1 second
+await useDelay(1000);
 
-// Timer with cancel
-const cancel = useSetTimeout(() => console.log("done"), 5000);
-cancel(); // cancel the timeout
+const { promise, cancel } = useSetTimeout(() => "done", 5000);
+cancel(); // rejects promise with "Timeout cancelled"
 
-// Interval with cancel
-const stop = useInterval(() => console.log("tick"), 1000);
+const { stop } = useInterval(() => console.log("tick"), 1000);
 stop();
 
-// Debounce a function
-const debouncedSearch = useDebounce((query: string) => {
-  fetch(`/api/search?q=${query}`);
+const debouncedSearch = useDebounce((...args: unknown[]) => {
+  const query = String(args[0] ?? "");
+  void fetch(`/api/search?q=${query}`);
 }, 300);
 
-// Throttle a function
 const throttledScroll = useThrottle(() => {
   console.log("scroll position updated");
 }, 100);
 
-// Repeat N times
-const stopRepeat = useRepeat(() => console.log("retry"), 1000, 3);
+await useRepeat(async (i) => console.log("retry", i), 3, 1000);
 
-// Race multiple async operations
-const fastest = await useRace([fetchA(), fetchB(), fetchC()]);
+// Race a promise against a timeout (ms)
+const value = await useRace(fetch("/api").then((r) => r.json()), 5000);
 ```
 
 ---
@@ -436,14 +428,14 @@ const fastest = await useRace([fetchA(), fetchB(), fetchC()]);
 ## Viewport — `ViewportService`
 
 ```ts
-import { ViewportService } from "katanakit-js";
+import {
+  useMatchesMedia, useScrollTo, useScrollToElement, usePrefersReducedMotion,
+} from "katanakit-js";
 
-const vp = ViewportService.getInstance();
-
-vp.useBreakpoint("md");              // true if viewport >= 768px
-vp.useScrollTo("#section-2");        // smooth scroll
-vp.useScrollToElement(element);      // scroll to DOM element
-vp.usePrefersReducedMotion();        // true if user prefers reduced motion
+useMatchesMedia("(min-width: 768px)");
+useScrollTo(0, 0); // x, y
+useScrollToElement("#section-2");
+usePrefersReducedMotion();
 ```
 
 ---
@@ -455,25 +447,16 @@ import { ObserverService } from "katanakit-js";
 
 const observer = ObserverService.getInstance();
 
-// Create an IntersectionObserver
-const obs = observer.useCreate({ threshold: 0.5 });
-
-// Observe a single element
-const unobserve = observer.useObserve(element, (entry) => {
+observer.useCreate("reveal", (entry) => {
   if (entry.isIntersecting) {
-    console.log("Element is visible!");
+    console.log("Element is visible!", entry.target);
   }
-});
+}, { threshold: 0.5 });
 
-// Observe all matching elements
-const unobserveAll = observer.useObserveAll(".lazy-img", (entry) => {
-  if (entry.isIntersecting) {
-    (entry.target as HTMLImageElement).src = entry.target.dataset.src!;
-  }
-});
-
-// Disconnect all
-observer.useDisconnect();
+observer.useObserve("reveal", document.querySelector(".card")!);
+observer.useObserveAll("reveal", ".lazy-img");
+observer.useDisconnect("reveal");
+// or: observer.useDisconnectAll();
 ```
 
 ---
@@ -483,22 +466,16 @@ observer.useDisconnect();
 ```ts
 import { WorkerService } from "katanakit-js";
 
-const worker = WorkerService.getInstance();
+const workers = WorkerService.getInstance();
 
-// One-shot worker
-const result = await worker.useRun(`
-  self.onmessage = (e) => {
-    self.postMessage(e.data * 2);
-  };
-`, 21);
+// One-shot: pure function + input (runs off-thread when Worker is available)
+const result = await workers.useRun((n: number) => n * 2, 21);
 console.log(result); // 42
 
-// Worker pool
-const pool = worker.useCreatePool(4);
-const poolResult = await worker.useRunPool(pool, heavyComputationScript, data);
-
-// Cleanup
-worker.useTerminate();
+// Named pool
+workers.useCreatePool("square", (n: number) => n ** 2);
+const squared = await workers.useRunPool<number, number>("square", 9);
+workers.useTerminate("square");
 ```
 
 ---

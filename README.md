@@ -16,7 +16,7 @@ yarn add katanakit-js
 
 ```html
 <script type="module">
-  import { useGet, useInit } from "https://cdn.jsdelivr.net/npm/katanakit-js@latest/dist/index.js";
+  import { useGetApi, useInitApis } from "https://cdn.jsdelivr.net/npm/katanakit-js@latest/dist/index.js";
 </script>
 ```
 
@@ -28,18 +28,18 @@ yarn add katanakit-js
 ## Quick Start
 
 ```ts
-import { useInit, useGet } from "katanakit-js";
+import { useInitApis, useGetApi } from "katanakit-js";
 
 // Register your APIs once
-useInit({
+useInitApis({
   pokeapi: {
     baseUri: "https://pokeapi.co/api/v2",
     endpoints: { pokemonById: "/pokemon/:id/" },
   },
 });
 
-// Fetch with Safe Result — no try/catch needed
-const result = await useGet<{ name: string }>("pokeapi", "pokemonById", {
+// Fetch with Safe Result — no try/catch needed for HTTP failures
+const result = await useGetApi<{ name: string }>("pokeapi", "pokemonById", {
   params: { id: 25 },
 });
 
@@ -52,7 +52,7 @@ if (result.ok) {
 
 ## Features
 
-- **Safe Results** — every async operation returns `{ data, error, ok }` instead of throwing
+- **Safe Results** — HTTP (and other fallible) operations return `{ data, error, ok }` instead of throwing
 - **Zero side effects** — importing any module is safe. No `fetch` calls, no `console.log`, no storage writes
 - **Hexagonal architecture** — pure core, infrastructure adapters, framework adapters
 - **Tree-shakeable** — destructured re-exports from Singleton facades
@@ -65,7 +65,7 @@ if (result.ok) {
 | **Express** | `katanakit-js/adapters/express` | Reference server with CORS and hardened headers |
 | **Nuxt** | `katanakit-js/adapters/nuxt` | `useUnwrap`, `useSafeResponse`, `useEventResponse` |
 | **Vue** | `katanakit-js/adapters/vue` | `useKatanaFetch` composable with reactivity |
-| **Astro** | `katanakit-js` (main barrel) | `AstroService`, `RssService` |
+| **Astro** | `katanakit-js` or `katanakit-js/adapters/astro` | `AstroService`, `RssService` |
 
 ## Documentation
 

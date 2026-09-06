@@ -22,6 +22,10 @@
     "./adapters/vue": {
       "types": "./dist/adapters/vue/index.d.ts",
       "import": "./dist/adapters/vue/index.js"
+    },
+    "./adapters/astro": {
+      "types": "./dist/adapters/astro/index.d.ts",
+      "import": "./dist/adapters/astro/index.js"
     }
   },
   "files": [

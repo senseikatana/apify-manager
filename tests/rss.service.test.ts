@@ -142,6 +142,27 @@ describe("RssService", () => {
 			expect(result.data).toContain("/rss.xsl");
 			expect(result.data).toContain("<copyright>All rights reserved</copyright>");
 		});
+
+		it("sanitizes CDATA breakout sequences in content", () => {
+			const result = useGenerateRss({
+				title: "Blog",
+				description: "test",
+				site: "https://example.com",
+				items: [
+					{
+						title: "Post",
+						pubDate: new Date("2024-01-15"),
+						link: "/post/",
+						content: "safe ]]> breakout",
+					},
+				],
+			});
+
+			expect(result.ok).toBe(true);
+			if (!result.ok) return;
+			expect(result.data).toContain("]]]]><![CDATA[>");
+			expect(result.data).not.toMatch(/<content:encoded><!\[CDATA\[safe ]]> breakout\]\]>/);
+		});
 	});
 
 	describe("useRssLinkTag", () => {

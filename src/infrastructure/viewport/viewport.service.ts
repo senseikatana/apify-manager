@@ -5,6 +5,8 @@ import type { ScrollOptions, ScrollPosition, ViewportSize } from "../../types/in
  */
 export default class ViewportService {
 	private static instance: ViewportService;
+	private tempTitleTimer: ReturnType<typeof setTimeout> | undefined;
+	private tempTitleOriginal: string | undefined;
 
 	private constructor() {}
 
@@ -161,13 +163,23 @@ export default class ViewportService {
 	public useSetTempTitle = (tempTitle: string, durationMs = 3000): void => {
 		if (!this.isBrowser()) return;
 
-		const original = document.title;
+		if (this.tempTitleTimer !== undefined) {
+			clearTimeout(this.tempTitleTimer);
+			this.tempTitleTimer = undefined;
+		}
+
+		if (this.tempTitleOriginal === undefined) {
+			this.tempTitleOriginal = document.title;
+		}
+
 		document.title = tempTitle;
 
-		setTimeout(() => {
-			if (document.title === tempTitle) {
-				document.title = original;
+		this.tempTitleTimer = setTimeout(() => {
+			if (document.title === tempTitle && this.tempTitleOriginal !== undefined) {
+				document.title = this.tempTitleOriginal;
 			}
+			this.tempTitleOriginal = undefined;
+			this.tempTitleTimer = undefined;
 		}, durationMs);
 	};
 }
