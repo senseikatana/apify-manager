@@ -1,5 +1,9 @@
 import type { GeometryFormatOptions } from "../../types/index.js";
 
+/**
+ * Pure helper: formats a numeric geometry result via `Intl`.
+ * Stateless — input → formatted string only.
+ */
 function formatGeometry(value: number, options: GeometryFormatOptions = {}): string {
 	const { locale = "en", digits = 2, unit } = options;
 	const formatted = new Intl.NumberFormat(locale, {
@@ -10,7 +14,9 @@ function formatGeometry(value: number, options: GeometryFormatOptions = {}): str
 	return unit ? `${formatted} ${unit}` : formatted;
 }
 
-/** Area calculations for geometric shapes. */
+/**
+ * Pure area calculations for geometric shapes (static methods, no instance state).
+ */
 export class GeometryArea {
 	private constructor() {}
 
@@ -52,7 +58,9 @@ export class GeometryArea {
 	}
 }
 
-/** Perimeter calculations for geometric shapes. */
+/**
+ * Pure perimeter calculations for geometric shapes (static methods, no instance state).
+ */
 export class GeometryPerimeter {
 	private constructor() {}
 
@@ -92,10 +100,15 @@ export class GeometryPerimeter {
 	}
 
 	static useEllipse(semiMajor: number, semiMinor: number, options?: GeometryFormatOptions): string {
-		const a = semiMajor;
-		const b = semiMinor;
-		const h = (a - b) ** 2 / (a + b) ** 2;
-		const perimeter = Math.PI * (a + b) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)));
+		const a = Math.abs(semiMajor);
+		const b = Math.abs(semiMinor);
+		const sum = a + b;
+		if (sum === 0) {
+			return formatGeometry(0, options);
+		}
+		// Ramanujan approximation II — stable when a === b (circle).
+		const h = ((a - b) / sum) ** 2;
+		const perimeter = Math.PI * sum * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)));
 		return formatGeometry(perimeter, options);
 	}
 
@@ -104,7 +117,9 @@ export class GeometryPerimeter {
 	}
 }
 
-/** Volume calculations for 3D geometric shapes. */
+/**
+ * Pure volume calculations for 3D geometric shapes (static methods, no instance state).
+ */
 export class GeometryVolume {
 	private constructor() {}
 
@@ -139,8 +154,8 @@ export class GeometryVolume {
 }
 
 /**
- * Consolidated geometry utilities namespace.
- * Groups area, perimeter and volume calculations.
+ * Consolidated pure geometry utilities namespace.
+ * Groups area, perimeter and volume calculations (no shared mutable state).
  */
 export const GeometryUtils = {
 	area: GeometryArea,
