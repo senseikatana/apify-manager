@@ -1,10 +1,12 @@
-import type { SiteConfig } from "./site.config.js";
+import { type SiteConfig, siteConfig as defaultSiteConfig } from "./site.config.js";
 import type {
 	SeoMeta,
 	SeoMetaInput,
 	SeoOgImageObject,
 	SeoRobotsObject,
 	SeoTagNode,
+	UseSeoMetaBase,
+	UseSeoMetaOptions,
 } from "./seo-meta.types.js";
 
 export type {
@@ -12,14 +14,13 @@ export type {
 	SeoBooleanable,
 	SeoMeta,
 	SeoMetaArticle,
-	SeoMetaBook,
 	SeoMetaFlat,
 	SeoMetaInput,
-	SeoMetaProfile,
 	SeoOgImageObject,
-	SeoOgVideoObject,
 	SeoRobotsObject,
 	SeoTagNode,
+	UseSeoMetaBase,
+	UseSeoMetaOptions,
 } from "./seo-meta.types.js";
 
 /**
@@ -27,7 +28,7 @@ export type {
  *
  * - **SSR / Astro / templates:** use `html`
  * - **Vanilla / SPA:** use `tags` + {@link useApplySeoTag}
- * - **Any framework:** use resolved fields as props
+ * - **Any framework:** use resolved fields / `config` as props
  *
  * Inside Nuxt apps prefer Nuxt's own `useSeoMeta` / `useHead`.
  */
@@ -38,8 +39,10 @@ export interface SeoTagResult {
 	description: string;
 	url: string;
 	ogImage?: string;
-	/** Flat input after site defaults were merged. */
+	/** Flat meta after defaults were merged. */
 	meta: SeoMetaInput;
+	/** Resolved {@link SiteConfig} extracted from the unified options object. */
+	config: SiteConfig;
 	jsonLd?: Record<string, unknown>;
 }
 
@@ -47,44 +50,43 @@ export interface SeoTagResult {
 export type SeoTagsResult = SeoTagResult;
 
 /**
- * Builds SEO tags from a Nuxt-style flat object. Resolves immediately (no reactivity).
+ * SEO helper: one flat object with site fields + HTML meta + Open Graph.
+ * Resolves immediately (no reactivity).
  *
  * @example
  * ```ts
- * import { useSeoMeta, useApplySeoTag } from "katanakit-js";
- *
  * const seo = useSeoMeta({
- *   title: "My Amazing Site",
- *   ogTitle: "My Amazing Site",
- *   description: "This is my amazing site",
- *   ogDescription: "This is my amazing site",
+ *   site: "https://example.com",
+ *   siteTitle: "My Site",
+ *   title: "Home",
+ *   description: "…",
  *   ogImage: "https://example.com/image.png",
- *   twitterCard: "summary_large_image",
  * });
- * useApplySeoTag(seo);
  * ```
  */
-export function useSeoMeta(input: SeoMetaInput, config?: SiteConfig): SeoTagResult {
-	const merged = mergeSeoDefaults(input, config);
+export function useSeoMeta<OmitKeys extends keyof UseSeoMetaBase = never>(
+	opts: UseSeoMetaOptions<OmitKeys>,
+	defaults: SiteConfig = defaultSiteConfig,
+): SeoTagResult {
+	const { config, meta } = splitUseSeoMetaOptions(opts as UseSeoMetaOptions, defaults);
+	const merged = mergeSeoDefaults(meta, config);
 	const tags = flattenSeoMetaToTags(merged, config);
-	if (config) {
-		const rss = buildRssTagNode(config);
-		if (rss) tags.push(rss);
-		if (config.seo.jsonLd) {
-			const jsonLd = buildJsonLdFromInput(merged, config);
-			if (jsonLd) {
-				tags.push({
-					tag: "script",
-					attrs: { type: "application/ld+json" },
-					text: safeJsonLd(jsonLd),
-				});
-			}
-		}
+
+	const rss = buildRssTagNode(config);
+	if (rss) tags.push(rss);
+
+	const jsonLd = config.seo.jsonLd ? buildJsonLdFromInput(merged, config) : undefined;
+	if (jsonLd) {
+		tags.push({
+			tag: "script",
+			attrs: { type: "application/ld+json" },
+			text: safeJsonLd(jsonLd),
+		});
 	}
 
-	const title = String(merged.title ?? config?.title ?? "");
-	const description = String(merged.description ?? config?.description ?? "");
-	const url = String(merged.ogUrl ?? merged.canonical ?? merged.url ?? config?.site ?? "");
+	const title = String(merged.title ?? config.title);
+	const description = String(merged.description ?? config.description);
+	const url = String(merged.ogUrl ?? merged.canonical ?? merged.url ?? config.site);
 	const ogImage = resolveOgImageUrl(merged, config);
 
 	return {
@@ -95,20 +97,84 @@ export function useSeoMeta(input: SeoMetaInput, config?: SiteConfig): SeoTagResu
 		url,
 		ogImage,
 		meta: merged,
-		jsonLd: config?.seo.jsonLd ? buildJsonLdFromInput(merged, config) : undefined,
+		config,
+		jsonLd,
 	};
 }
 
 /**
- * @deprecated Prefer {@link useSeoMeta} with a Nuxt-style flat object.
+ * @deprecated Prefer {@link useSeoMeta} with a unified flat object.
  * Legacy: `useSeoTag(siteConfig, { title, description, ... })`.
  */
 export function useSeoTag(config: SiteConfig, meta: SeoMeta): SeoTagResult {
-	return useSeoMeta(legacySeoMetaToInput(meta), config);
+	return useSeoMeta({ ...siteConfigToOpts(config), ...legacySeoMetaToInput(meta) });
 }
 
 /** @deprecated Prefer {@link useSeoMeta}. */
 export const useSeoTags = useSeoTag;
+
+/** Maps a {@link SiteConfig} into unified {@link UseSeoMetaOptions} site fields. */
+function siteConfigToOpts(config: SiteConfig): UseSeoMetaOptions {
+	return {
+		site: config.site,
+		siteTitle: config.title,
+		lang: config.lang,
+		author: config.author,
+		ogImage: config.ogImage,
+		description: config.description,
+		rss: config.rss,
+		seo: {
+			noindex: config.seo.noindex,
+			canonical: config.seo.canonical,
+			openGraph: config.seo.openGraph,
+			jsonLd: config.seo.jsonLd,
+		},
+		nav: config.nav,
+	};
+}
+
+function splitUseSeoMetaOptions(
+	opts: UseSeoMetaOptions,
+	defaults: SiteConfig,
+): { config: SiteConfig; meta: SeoMetaInput } {
+	const { site, siteTitle, lang, rss, seo, nav, ...metaRest } = opts;
+
+	const brand =
+		siteTitle ??
+		(typeof opts.ogSiteName === "string" ? opts.ogSiteName : undefined) ??
+		defaults.title;
+
+	const config: SiteConfig = {
+		site: site ?? defaults.site,
+		title: brand,
+		description:
+			(typeof metaRest.description === "string" ? metaRest.description : undefined) ??
+			defaults.description,
+		lang: lang ?? defaults.lang,
+		author:
+			(typeof metaRest.author === "string" ? metaRest.author : undefined) ?? defaults.author,
+		ogImage:
+			typeof metaRest.ogImage === "string" ? metaRest.ogImage : (defaults.ogImage ?? undefined),
+		twitter: defaults.twitter,
+		rss: {
+			enabled: rss?.enabled ?? defaults.rss.enabled,
+			path: rss?.path ?? defaults.rss.path,
+			title: rss?.title ?? defaults.rss.title,
+			description: rss?.description ?? defaults.rss.description,
+			limit: rss?.limit ?? defaults.rss.limit,
+		},
+		seo: {
+			noindex: seo?.noindex ?? defaults.seo.noindex,
+			canonical: seo?.canonical ?? defaults.seo.canonical,
+			openGraph: seo?.openGraph ?? defaults.seo.openGraph,
+			twitterCard: defaults.seo.twitterCard,
+			jsonLd: seo?.jsonLd ?? defaults.seo.jsonLd,
+		},
+		nav: nav ?? defaults.nav,
+	};
+
+	return { config, meta: { ...metaRest } };
+}
 
 /**
  * Applies {@link SeoTagResult.tags} into `document.head` (Vanilla / SPA).
@@ -141,12 +207,10 @@ export function useApplySeoTag(
 
 /** HTML string of meta tags (no RSS). Prefer {@link useSeoMeta}. */
 export function useGenerateMetaTags(config: SiteConfig, meta: SeoMeta): string {
-	const { tags } = useSeoMeta(legacySeoMetaToInput(meta), {
-		...config,
-		rss: { ...config.rss, enabled: false },
-		seo: { ...config.seo, jsonLd: config.seo.jsonLd },
+	const { tags } = useSeoMeta({
+		...siteConfigToOpts({ ...config, rss: { ...config.rss, enabled: false } }),
+		...legacySeoMetaToInput(meta),
 	});
-	// Re-run without RSS: strip rss by using disabled rss above; jsonLd still included.
 	return serializeSeoTags(tags.filter((t) => !(t.tag === "link" && t.attrs?.rel === "alternate")));
 }
 
@@ -167,7 +231,7 @@ export function useHeadTags(config: SiteConfig, meta: SeoMeta | SeoMetaInput): s
 	if (isLegacySeoMeta(meta)) {
 		return useSeoTag(config, meta).html;
 	}
-	return useSeoMeta(meta, config).html;
+	return useSeoMeta({ ...siteConfigToOpts(config), ...meta }).html;
 }
 
 function isLegacySeoMeta(meta: SeoMeta | SeoMetaInput): meta is SeoMeta {
@@ -184,19 +248,21 @@ function isLegacySeoMeta(meta: SeoMeta | SeoMetaInput): meta is SeoMeta {
 function legacySeoMetaToInput(meta: SeoMeta): SeoMetaInput {
 	const input: SeoMetaInput = {
 		title: meta.title,
-		description: meta.description,
-		canonical: meta.canonical,
-		url: meta.url,
-		ogUrl: meta.url,
-		ogImage: meta.ogImage,
-		ogType: meta.ogType,
-		author: meta.author,
 	};
+	if (meta.description != null) input.description = meta.description;
+	if (meta.canonical != null) input.canonical = meta.canonical;
+	if (meta.url != null) {
+		input.url = meta.url;
+		input.ogUrl = meta.url;
+	}
+	if (meta.ogImage != null) input.ogImage = meta.ogImage;
+	if (meta.ogType != null) input.ogType = meta.ogType;
+	if (meta.author != null) input.author = meta.author;
 	if (meta.ogType === "article") {
-		input.articlePublishedTime = meta.publishedTime;
-		input.articleModifiedTime = meta.modifiedTime;
-		input.articleTag = meta.tags;
-		input.articleAuthor = meta.author ? [meta.author] : undefined;
+		if (meta.publishedTime != null) input.articlePublishedTime = meta.publishedTime;
+		if (meta.modifiedTime != null) input.articleModifiedTime = meta.modifiedTime;
+		if (meta.tags != null) input.articleTag = meta.tags;
+		if (meta.author) input.articleAuthor = [meta.author];
 	}
 	if (meta.noindex) {
 		input.robots = "noindex, nofollow";
@@ -245,28 +311,12 @@ function mergeSeoDefaults(input: SeoMetaInput, config?: SiteConfig): SeoMetaInpu
 		merged.robots = "noindex, nofollow";
 	}
 
-	if (config.seo.twitterCard) {
-		merged.twitterCard = input.twitterCard ?? "summary_large_image";
-		merged.twitterTitle = input.twitterTitle ?? title;
-		merged.twitterDescription = input.twitterDescription ?? description;
-		if (config.twitter) {
-			const handle = config.twitter.startsWith("@") ? config.twitter : `@${config.twitter}`;
-			merged.twitterSite = input.twitterSite ?? handle;
-			merged.twitterCreator = input.twitterCreator ?? handle;
-		}
-		const imageUrl = resolveOgImageUrl(merged, config);
-		if (imageUrl && merged.twitterImage == null) {
-			merged.twitterImage = imageUrl;
-		}
-	}
-
 	if (!config.seo.openGraph) {
 		for (const key of Object.keys(merged) as (keyof SeoMetaInput)[]) {
 			if (String(key).startsWith("og") || String(key).startsWith("article")) {
 				delete merged[key];
 			}
 		}
-		// Keep title/description/canonical/author
 		merged.title = title;
 		merged.description = description;
 		merged.author = input.author ?? config.author;
@@ -297,62 +347,20 @@ function absoluteUrl(value: string, site?: string): string {
 
 // --- Flatten input → nodes ---
 
-const NAME_KEYS = new Set([
-	"description",
-	"keywords",
-	"author",
-	"creator",
-	"publisher",
-	"generator",
-	"applicationName",
-	"colorScheme",
-	"referrer",
-	"viewport",
-	"robots",
-	"google",
-	"googlebot",
-	"googlebotNews",
-	"googleSiteVerification",
-	"rating",
-	"themeColor",
-	"twitterCard",
-	"twitterSite",
-	"twitterSiteId",
-	"twitterCreator",
-	"twitterCreatorId",
-	"twitterTitle",
-	"twitterDescription",
-	"twitterImage",
-	"twitterImageAlt",
-	"twitterPlayer",
-	"twitterPlayerWidth",
-	"twitterPlayerHeight",
-	"twitterPlayerStream",
-	"twitterAppNameIphone",
-	"twitterAppIdIphone",
-	"twitterAppUrlIphone",
-	"twitterAppNameIpad",
-	"twitterAppIdIpad",
-	"twitterAppUrlIpad",
-	"twitterAppNameGoogleplay",
-	"twitterAppIdGoogleplay",
-	"twitterAppUrlGoogleplay",
-	"twitterData1",
-	"twitterLabel1",
-	"twitterData2",
-	"twitterLabel2",
-	"mobileWebAppCapable",
-	"appleMobileWebAppCapable",
-	"appleMobileWebAppStatusBarStyle",
-	"appleMobileWebAppTitle",
-	"appleItunesApp",
-	"formatDetection",
-	"msapplicationTileImage",
-	"msapplicationTileColor",
-	"msapplicationConfig",
-]);
+const NAME_KEYS = new Set(["description", "keywords", "author", "viewport", "robots"]);
 
-const SKIP_KEYS = new Set(["url", "title", "canonical", "charset"]);
+const SKIP_KEYS = new Set([
+	"url",
+	"title",
+	"canonical",
+	"charset",
+	"site",
+	"siteTitle",
+	"lang",
+	"rss",
+	"seo",
+	"nav",
+]);
 
 function flattenSeoMetaToTags(input: SeoMetaInput, config?: SiteConfig): SeoTagNode[] {
 	const tags: SeoTagNode[] = [];
@@ -373,8 +381,8 @@ function flattenSeoMetaToTags(input: SeoMetaInput, config?: SiteConfig): SeoTagN
 		if (raw === undefined || raw === null) continue;
 		if (SKIP_KEYS.has(key)) continue;
 
-		if (key === "ogImage" || key === "ogVideo") {
-			tags.push(...flattenMediaObject(key, raw, config));
+		if (key === "ogImage") {
+			tags.push(...flattenOgImage(raw, config));
 			continue;
 		}
 
@@ -393,31 +401,6 @@ function flattenSeoMetaToTags(input: SeoMetaInput, config?: SiteConfig): SeoTagN
 			continue;
 		}
 
-		if (key === "themeColor" && typeof raw === "object") {
-			const obj = raw as { content?: string; media?: string };
-			const attrs: Record<string, string> = { name: "theme-color", content: String(obj.content ?? "") };
-			if (obj.media) attrs.media = obj.media;
-			tags.push({ tag: "meta", attrs });
-			continue;
-		}
-
-		if (key === "appleItunesApp" && typeof raw === "object") {
-			const obj = raw as { appId?: string; appArgument?: string };
-			const parts = [
-				obj.appId ? `app-id=${obj.appId}` : "",
-				obj.appArgument ? `app-argument=${obj.appArgument}` : "",
-			].filter(Boolean);
-			if (parts.length) {
-				tags.push({ tag: "meta", attrs: { name: "apple-itunes-app", content: parts.join(", ") } });
-			}
-			continue;
-		}
-
-		if (key === "fbAppId") {
-			tags.push({ tag: "meta", attrs: { property: "fb:app_id", content: String(raw) } });
-			continue;
-		}
-
 		if (Array.isArray(raw)) {
 			for (const item of raw) {
 				pushScalarMeta(tags, key, item);
@@ -433,20 +416,20 @@ function flattenSeoMetaToTags(input: SeoMetaInput, config?: SiteConfig): SeoTagN
 
 function pushScalarMeta(tags: SeoTagNode[], key: string, value: unknown): void {
 	const content = String(value);
-	if (NAME_KEYS.has(key) || key.startsWith("twitter") || key.startsWith("apple") || key.startsWith("msapplication")) {
+	if (NAME_KEYS.has(key)) {
 		tags.push({ tag: "meta", attrs: { name: camelToMetaName(key), content } });
 		return;
 	}
-	if (key.startsWith("og") || key.startsWith("article") || key.startsWith("book") || key.startsWith("profile")) {
+	if (key.startsWith("og") || key.startsWith("article")) {
 		tags.push({ tag: "meta", attrs: { property: camelToMetaProperty(key), content } });
 		return;
 	}
 	tags.push({ tag: "meta", attrs: { name: camelToMetaName(key), content } });
 }
 
-function flattenMediaObject(key: "ogImage" | "ogVideo", raw: unknown, config?: SiteConfig): SeoTagNode[] {
+function flattenOgImage(raw: unknown, config?: SiteConfig): SeoTagNode[] {
 	const tags: SeoTagNode[] = [];
-	const prop = key === "ogImage" ? "og:image" : "og:video";
+	const prop = "og:image";
 
 	if (typeof raw === "string") {
 		tags.push({
@@ -490,24 +473,15 @@ function serializeRobots(value: string | SeoRobotsObject): string {
 	const map: Record<string, string> = {
 		index: "index",
 		follow: "follow",
-		all: "all",
 		noindex: "noindex",
 		nofollow: "nofollow",
 		none: "none",
 		noarchive: "noarchive",
-		nositelinkssearchbox: "nositelinkssearchbox",
 		nosnippet: "nosnippet",
-		indexifembedded: "indexifembedded",
-		notranslate: "notranslate",
-		noimageindex: "noimageindex",
 	};
 	for (const [k, directive] of Object.entries(map)) {
 		if (truthy(value[k as keyof SeoRobotsObject])) parts.push(directive);
 	}
-	if (value.maxSnippet != null) parts.push(`max-snippet:${value.maxSnippet}`);
-	if (value.maxImagePreview) parts.push(`max-image-preview:${value.maxImagePreview}`);
-	if (value.maxVideoPreview != null) parts.push(`max-video-preview:${value.maxVideoPreview}`);
-	if (value.unavailable_after) parts.push(`unavailable_after:${value.unavailable_after}`);
 	return parts.join(", ");
 }
 
@@ -520,24 +494,6 @@ function camelToKebab(key: string): string {
 }
 
 function camelToMetaName(key: string): string {
-	if (key.startsWith("twitter")) {
-		const rest = key.slice("twitter".length);
-		return rest ? `twitter:${camelToKebab(rest.charAt(0).toLowerCase() + rest.slice(1))}` : "twitter";
-	}
-	if (key.startsWith("msapplication")) {
-		return `msapplication-${camelToKebab(key.slice("msapplication".length))}`;
-	}
-	if (key === "googleSiteVerification") return "google-site-verification";
-	if (key === "googlebotNews") return "googlebot-news";
-	if (key === "applicationName") return "application-name";
-	if (key === "colorScheme") return "color-scheme";
-	if (key === "themeColor") return "theme-color";
-	if (key === "mobileWebAppCapable") return "mobile-web-app-capable";
-	if (key === "appleMobileWebAppCapable") return "apple-mobile-web-app-capable";
-	if (key === "appleMobileWebAppStatusBarStyle") return "apple-mobile-web-app-status-bar-style";
-	if (key === "appleMobileWebAppTitle") return "apple-mobile-web-app-title";
-	if (key === "appleItunesApp") return "apple-itunes-app";
-	if (key === "formatDetection") return "format-detection";
 	return camelToKebab(key);
 }
 
@@ -545,8 +501,6 @@ function camelToMetaProperty(key: string): string {
 	const overrides: Record<string, string> = {
 		ogSiteName: "og:site_name",
 		ogImageSecureUrl: "og:image:secure_url",
-		ogVideoSecureUrl: "og:video:secure_url",
-		ogAudioSecureUrl: "og:audio:secure_url",
 	};
 	if (overrides[key]) return overrides[key];
 
@@ -557,14 +511,6 @@ function camelToMetaProperty(key: string): string {
 	if (key.startsWith("article")) {
 		const rest = key.slice("article".length);
 		return `article:${rest.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase()}`;
-	}
-	if (key.startsWith("book")) {
-		const rest = key.slice("book".length);
-		return `book:${rest.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase()}`;
-	}
-	if (key.startsWith("profile")) {
-		const rest = key.slice("profile".length);
-		return `profile:${rest.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase()}`;
 	}
 	return camelToKebab(key);
 }

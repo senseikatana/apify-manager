@@ -3,16 +3,15 @@ export type {
 	SeoBooleanable,
 	SeoMeta,
 	SeoMetaArticle,
-	SeoMetaBook,
 	SeoMetaFlat,
 	SeoMetaInput,
-	SeoMetaProfile,
 	SeoOgImageObject,
-	SeoOgVideoObject,
 	SeoRobotsObject,
 	SeoTagNode,
 	SeoTagResult,
 	SeoTagsResult,
+	UseSeoMetaBase,
+	UseSeoMetaOptions,
 } from "./seo.service.js";
 export {
 	useApplySeoTag,

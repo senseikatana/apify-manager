@@ -1,13 +1,13 @@
 /**
- * Nuxt / Unhead–inspired flat SEO meta types (framework-agnostic).
- * CamelCase keys map to `<meta name|property>` / `<link>` / `<title>`.
+ * Slim SEO types: typical HTML meta + Open Graph (Facebook) only.
+ * CamelCase keys map to `<title>` / `<meta>` / `<link rel="canonical">`.
  */
 
 export type SeoBooleanable = boolean | "true" | "false" | "" | 0 | 1;
 
 export type SeoArrayable<T> = T | readonly T[];
 
-/** Open Graph image descriptor (Nuxt-style object form). */
+/** Open Graph image (string URL or object). */
 export interface SeoOgImageObject {
 	url?: string;
 	secureUrl?: string;
@@ -17,108 +17,52 @@ export interface SeoOgImageObject {
 	alt?: string;
 }
 
-/** Open Graph video descriptor. */
-export interface SeoOgVideoObject {
-	url?: string;
-	secureUrl?: string;
-	type?: "application/x-shockwave-flash" | "video/mp4" | "video/webm" | string;
-	width?: string | number;
-	height?: string | number;
-	alt?: string;
-}
-
-/** Robots directives as a structured object (also accepts a string). */
+/** Robots as string or simple object. */
 export interface SeoRobotsObject {
 	index?: SeoBooleanable;
 	follow?: SeoBooleanable;
-	all?: SeoBooleanable;
 	noindex?: SeoBooleanable;
 	nofollow?: SeoBooleanable;
 	none?: SeoBooleanable;
 	noarchive?: SeoBooleanable;
-	nositelinkssearchbox?: SeoBooleanable;
 	nosnippet?: SeoBooleanable;
-	indexifembedded?: SeoBooleanable;
-	maxSnippet?: number | string;
-	maxImagePreview?: "none" | "standard" | "large";
-	maxVideoPreview?: number | string;
-	notranslate?: SeoBooleanable;
-	unavailable_after?: string;
-	noimageindex?: SeoBooleanable;
 }
 
+/** Article Open Graph extensions (`og:type=article`). */
 export interface SeoMetaArticle {
 	articleAuthor?: readonly string[];
-	articleExpirationTime?: string;
 	articleModifiedTime?: string;
 	articlePublishedTime?: string;
 	articleSection?: string;
 	articleTag?: readonly string[];
 }
 
-export interface SeoMetaBook {
-	bookAuthor?: readonly string[];
-	bookIsbn?: string;
-	bookReleaseDate?: string;
-	bookTag?: readonly string[];
-}
-
-export interface SeoMetaProfile {
-	profileFirstName?: string;
-	profileGender?: "male" | "female" | string;
-	profileLastName?: string;
-	profileUsername?: string;
-}
-
 /**
- * Flat SEO payload inspired by Nuxt `useSeoMeta` / Unhead `MetaFlat`.
- * All fields optional except when required by your page (`title` recommended).
+ * Flat meta: HTML head essentials + Facebook Open Graph.
  */
-export interface SeoMetaFlat extends SeoMetaArticle, SeoMetaBook, SeoMetaProfile {
-	/** Document `<title>` (not a meta tag). */
+export interface SeoMetaFlat extends SeoMetaArticle {
+	/** Document `<title>`. */
 	title?: string;
-	/** Canonical URL → `<link rel="canonical">`. */
-	canonical?: string;
-
-	charset?: "utf-8" | string;
+	/** Meta description. */
 	description?: string;
+	/** Meta keywords (legacy; optional). */
 	keywords?: string;
-	colorScheme?: "normal" | "light dark" | "dark light" | "only light" | string;
-	applicationName?: string;
+	/** Meta author. */
 	author?: string;
-	creator?: string;
-	publisher?: string;
-	generator?: string;
-	referrer?: string;
+	/** `<link rel="canonical">`. */
+	canonical?: string;
+	/** Absolute page URL (feeds og:url / canonical defaults). */
+	url?: string;
+	charset?: "utf-8" | string;
 	viewport?: string | Record<string, string | number | undefined>;
 	robots?: "noindex, nofollow" | "index, follow" | string | SeoRobotsObject;
-	google?: "nositelinkssearchbox" | "nopagereadaloud" | string;
-	googlebot?: string;
-	googlebotNews?: string;
-	googleSiteVerification?: string;
-	rating?: "adult" | string;
-	themeColor?: string | { content?: string; media?: string };
 
+	/** Open Graph */
 	ogUrl?: string;
 	ogTitle?: string;
 	ogDescription?: string;
-	ogType?:
-		| "website"
-		| "article"
-		| "book"
-		| "profile"
-		| "music.song"
-		| "music.album"
-		| "music.playlist"
-		| "music.radio_station"
-		| "video.movie"
-		| "video.episode"
-		| "video.tv_show"
-		| "video.other"
-		| string;
+	ogType?: "website" | "article" | "profile" | string;
 	ogLocale?: string;
-	ogLocaleAlternate?: SeoArrayable<string>;
-	ogDeterminer?: "a" | "an" | "the" | "" | "auto";
 	ogSiteName?: string;
 	ogImage?: string | SeoArrayable<SeoOgImageObject>;
 	ogImageUrl?: string;
@@ -127,69 +71,57 @@ export interface SeoMetaFlat extends SeoMetaArticle, SeoMetaBook, SeoMetaProfile
 	ogImageWidth?: string | number;
 	ogImageHeight?: string | number;
 	ogImageAlt?: string;
-	ogVideo?: string | SeoArrayable<SeoOgVideoObject>;
-	ogVideoUrl?: string;
-	ogVideoSecureUrl?: string;
-	ogVideoType?: string;
-	ogVideoWidth?: string | number;
-	ogVideoHeight?: string | number;
-	ogVideoAlt?: string;
-	ogAudio?: string;
-	ogAudioUrl?: string;
-	ogAudioSecureUrl?: string;
-	ogAudioType?: string;
-
-	twitterCard?: "summary" | "summary_large_image" | "app" | "player" | string;
-	twitterSite?: string;
-	twitterSiteId?: string | number;
-	twitterCreator?: string;
-	twitterCreatorId?: string | number;
-	twitterTitle?: string;
-	twitterDescription?: string;
-	twitterImage?: string;
-	twitterImageAlt?: string;
-	twitterPlayer?: string;
-	twitterPlayerWidth?: string | number;
-	twitterPlayerHeight?: string | number;
-	twitterPlayerStream?: string;
-	twitterAppNameIphone?: string;
-	twitterAppIdIphone?: string | number;
-	twitterAppUrlIphone?: string;
-	twitterAppNameIpad?: string;
-	twitterAppIdIpad?: string | number;
-	twitterAppUrlIpad?: string;
-	twitterAppNameGoogleplay?: string;
-	twitterAppIdGoogleplay?: string | number;
-	twitterAppUrlGoogleplay?: string;
-	twitterData1?: string;
-	twitterLabel1?: string;
-	twitterData2?: string;
-	twitterLabel2?: string;
-
-	fbAppId?: string | number;
-
-	mobileWebAppCapable?: "yes" | string;
-	appleMobileWebAppCapable?: "yes" | string;
-	appleMobileWebAppStatusBarStyle?: "default" | "black" | "black-translucent" | string;
-	appleMobileWebAppTitle?: string;
-	appleItunesApp?: string | { appId?: string; appArgument?: string };
-	formatDetection?: "telephone=no" | string;
-	msapplicationTileImage?: string;
-	msapplicationTileColor?: string;
-	msapplicationConfig?: string;
-
-	/** Absolute page URL used when merging site defaults (maps to og:url / canonical). */
-	url?: string;
 }
 
-/** Input accepted by {@link useSeoMeta} — same as Nuxt: a flat object. */
+/** Flat meta input (all keys optional / nullable). */
 export type SeoMetaInput = {
 	[K in keyof SeoMetaFlat]?: SeoMetaFlat[K] | null;
 };
 
+/** Site + HTML + OG fields in one object (before Omit). */
+export type UseSeoMetaBase = SeoMetaInput & {
+	/** Base URL of the site (no trailing slash). */
+	site?: string;
+	/**
+	 * Site brand (SiteConfig.title / og:site_name).
+	 * Distinct from page `title`.
+	 */
+	siteTitle?: string;
+	lang?: string;
+	rss?: Partial<{
+		enabled: boolean;
+		path: string;
+		title?: string;
+		description?: string;
+		limit: number;
+	}>;
+	seo?: Partial<{
+		noindex: boolean;
+		canonical: boolean;
+		openGraph: boolean;
+		jsonLd: boolean;
+	}>;
+	nav?: Array<{ label: string; href: string; external?: boolean }>;
+};
+
 /**
- * Legacy page meta used by {@link useSeoTag}. Prefer {@link SeoMetaInput}.
- * @deprecated Prefer Nuxt-style {@link SeoMetaInput} with {@link useSeoMeta}.
+ * Public options for {@link useSeoMeta}.
+ * Only HTML + Open Graph (+ site fields). Omit keys you do not want in the type:
+ *
+ * @example
+ * ```ts
+ * useSeoMeta({ title: "Home", ogImage: "/og.png" } satisfies UseSeoMetaOptions);
+ * useSeoMeta({ title: "Home" } as UseSeoMetaOptions<"rss" | "nav">);
+ * ```
+ */
+export type UseSeoMetaOptions<OmitKeys extends keyof UseSeoMetaBase = never> = Omit<
+	UseSeoMetaBase,
+	OmitKeys
+>;
+
+/**
+ * Legacy page meta. Prefer {@link UseSeoMetaOptions}.
+ * @deprecated
  */
 export interface SeoMeta {
 	title: string;
@@ -205,7 +137,6 @@ export interface SeoMeta {
 	noindex?: boolean;
 }
 
-/** One `<head>` node as data (safe to map in any framework / Vanilla DOM). */
 export interface SeoTagNode {
 	tag: "title" | "meta" | "link" | "script";
 	attrs?: Record<string, string>;

@@ -7,6 +7,7 @@ import {
 	useSeoTag,
 	useSeoTags,
 	useTitle,
+	type UseSeoMetaOptions,
 } from "@/config/seo.service";
 import { type SiteConfig, siteConfig } from "@/config/site.config";
 
@@ -108,9 +109,9 @@ describe("seo.service", () => {
 				title: "Blog Post",
 			});
 
-			expect(tags).toContain('<meta name="twitter:card" content="summary_large_image" />');
-			expect(tags).toContain('<meta name="twitter:site" content="@johndoe" />');
-			expect(tags).toContain('<meta name="twitter:creator" content="@johndoe" />');
+			// Twitter tags are intentionally not emitted (HTML + Open Graph only).
+			expect(tags).not.toContain("twitter:card");
+			expect(tags).toContain('<meta property="og:title"');
 		});
 
 		it("includes JSON-LD with script-safe escaping", () => {
@@ -190,28 +191,32 @@ describe("seo.service", () => {
 	});
 
 	describe("useSeoMeta", () => {
-		it("accepts a Nuxt-style flat object and resolves immediately", () => {
-			const seo = useSeoMeta(
-				{
-					title: "My Amazing Site",
-					ogTitle: "My Amazing Site",
-					description: "This is my amazing site",
-					ogDescription: "This is my amazing site",
-					ogImage: "https://example.com/image.png",
-					twitterCard: "summary_large_image",
-					ogType: "website",
-					canonical: "https://example.com/",
-					robots: "index, follow",
-				},
-				config,
-			);
+		it("accepts a unified SiteConfig + Meta flat object (HTML + Open Graph)", () => {
+			const seo = useSeoMeta({
+				site: "https://example.com",
+				siteTitle: "My Site",
+				lang: "en-US",
+				author: "John Doe",
+				title: "My Amazing Site",
+				ogTitle: "My Amazing Site",
+				description: "This is my amazing site",
+				ogDescription: "This is my amazing site",
+				ogImage: "https://example.com/image.png",
+				ogType: "website",
+				canonical: "https://example.com/",
+				robots: "index, follow",
+				rss: { enabled: true, path: "/rss.xml", limit: 20 },
+				seo: { noindex: false, canonical: true, openGraph: true, jsonLd: true },
+			} satisfies UseSeoMetaOptions);
 
+			expect(seo.config.site).toBe("https://example.com");
+			expect(seo.config.title).toBe("My Site");
 			expect(seo.html).toContain("<title>My Amazing Site | My Site</title>");
 			expect(seo.html).toContain('<meta property="og:title" content="My Amazing Site" />');
 			expect(seo.html).toContain(
 				'<meta property="og:image" content="https://example.com/image.png" />',
 			);
-			expect(seo.html).toContain('<meta name="twitter:card" content="summary_large_image" />');
+			expect(seo.html).not.toContain("twitter:card");
 			expect(seo.html).toContain('<link rel="canonical" href="https://example.com/" />');
 			expect(seo.html).toContain('<meta name="robots" content="index, follow" />');
 			expect(seo.tags.length).toBeGreaterThan(5);
@@ -236,16 +241,21 @@ describe("seo.service", () => {
 			expect(seo.html).toContain('<meta name="robots" content="noindex, nofollow" />');
 		});
 
-		it("works without site config (pure flat input)", () => {
-			const seo = useSeoMeta({
-				title: "Standalone",
-				description: "No site config",
-				ogImage: "https://cdn.example.com/og.png",
-			});
+		it("merges page meta with defaults when site fields omitted", () => {
+			const seo = useSeoMeta(
+				{
+					title: "Standalone",
+					description: "No site fields in opts",
+					ogImage: "https://cdn.example.com/og.png",
+					rss: { enabled: false },
+				},
+				{ ...config, rss: { ...config.rss, enabled: false } },
+			);
 
-			expect(seo.title).toBe("Standalone");
-			expect(seo.description).toBe("No site config");
-			expect(seo.html).toContain("<title>Standalone</title>");
+			expect(seo.title).toBe("Standalone | My Site");
+			expect(seo.description).toBe("No site fields in opts");
+			expect(seo.config.site).toBe("https://example.com");
+			expect(seo.html).toContain("<title>Standalone | My Site</title>");
 			expect(seo.html).toContain(
 				'<meta property="og:image" content="https://cdn.example.com/og.png" />',
 			);
@@ -260,7 +270,7 @@ describe("seo.service", () => {
 			expect(siteConfig.lang).toBe("en");
 			expect(siteConfig.rss.enabled).toBe(true);
 			expect(siteConfig.seo.openGraph).toBe(true);
-			expect(siteConfig.seo.twitterCard).toBe(true);
+			expect(siteConfig.seo.twitterCard).toBe(false);
 			expect(siteConfig.seo.jsonLd).toBe(true);
 		});
 	});

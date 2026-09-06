@@ -1,3 +1,6 @@
+import { useLogger } from "@/core/index.js";
+import { useSeoMeta } from "./seo.service.js";
+
 /**
  * Site-wide configuration for KatanaKit SEO / RSS helpers.
  * Framework-agnostic — reuse in Vanilla, Astro, Vue/React SPAs, Express, etc.
@@ -85,22 +88,28 @@ export interface SiteConfig {
  * };
  * ```
  */
-export const siteConfig: SiteConfig = {
-	site: "https://example.com",
-	title: "My Site",
-	description: "A site built with KatanaKit and Astro",
-	lang: "en",
-	author: "Author",
-	rss: {
-		enabled: true,
-		path: "/rss.xml",
-		limit: 20,
-	},
-	seo: {
-		noindex: false,
-		canonical: true,
-		openGraph: true,
-		twitterCard: true,
-		jsonLd: true,
-	},
-};
+// export const siteConfig: SiteConfig = {
+// 	site: "https://example.com",
+// 	title: "My Site",
+// 	description: "A site built with KatanaKit and Astro",
+// 	lang: "en",
+// 	author: "Author",
+// 	rss: {
+// 		enabled: true,
+// 		path: "/rss.xml",
+// 		limit: 20,
+// 	},
+// 	seo: {
+// 		noindex: false,
+// 		canonical: true,
+// 		openGraph: true,
+// 		twitterCard: true,
+// 		jsonLd: true,
+// 	},
+// };
+
+export const seo = useSeoMeta({});
+
+seo.title.toString();
+
+seo.config.title;

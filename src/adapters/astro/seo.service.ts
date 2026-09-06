@@ -11,6 +11,8 @@ export type {
 	SeoTagNode,
 	SeoTagResult,
 	SeoTagsResult,
+	UseSeoMetaBase,
+	UseSeoMetaOptions,
 } from "../../config/seo.service.js";
 export {
 	useApplySeoTag,

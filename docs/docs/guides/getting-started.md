@@ -691,85 +691,31 @@ export const GET = useCreateRssEndpoint({
 
 ---
 
-## SEO — `useSeoMeta` (Nuxt-style, framework-agnostic)
+## SEO — `useSeoMeta` (HTML + Open Graph)
 
-Pure builders in `src/config/`. Flat object API inspired by Nuxt `useSeoMeta`,
-without Vue reactivity.
-
-**Use KatanaKit SEO for:** Vanilla JS, Astro, Vue/React SPAs, Express HTML.
-**Inside Nuxt:** prefer Nuxt's own `useSeoMeta` / `useHead`.
+One flat object: site fields + **HTML meta** + **Facebook Open Graph**.
+No Twitter / Apple / MS tags. Optional `Omit` for keys you never pass:
 
 ```ts
-import { useSeoMeta, useApplySeoTag, type SiteConfig, type SeoMetaInput } from "katanakit-js";
+import { useSeoMeta, type UseSeoMetaOptions } from "katanakit-js";
 
-const siteConfig: SiteConfig = {
+const seo = useSeoMeta({
   site: "https://myblog.com",
-  title: "My Blog",
-  description: "A blog about TypeScript",
-  lang: "en",
-  author: "John Doe",
-  ogImage: "/og-default.png",
-  twitter: "johndoe",
-  rss: { enabled: true, path: "/rss.xml", limit: 20 },
-  seo: { noindex: false, canonical: true, openGraph: true, twitterCard: true, jsonLd: true },
-};
+  siteTitle: "My Blog",
+  title: "My Post",
+  description: "A great post",
+  ogTitle: "My Post",
+  ogDescription: "A great post",
+  ogImage: "https://myblog.com/og.png",
+  ogType: "article",
+  canonical: "https://myblog.com/posts/my-post/",
+} satisfies UseSeoMetaOptions);
 
-const seo = useSeoMeta(
-  {
-    title: "My Amazing Site",
-    ogTitle: "My Amazing Site",
-    description: "This is my amazing site",
-    ogDescription: "This is my amazing site",
-    ogImage: "https://example.com/image.png",
-    twitterCard: "summary_large_image",
-    ogType: "article",
-    articlePublishedTime: "2026-01-15T00:00:00Z",
-    canonical: "https://myblog.com/posts/my-post/",
-  } satisfies SeoMetaInput,
-  siteConfig,
-);
-// seo.html  → SSR / Astro / template injection
-// seo.tags  → Vanilla / SPA programmatic nodes
-// seo.title / description / url / ogImage → props / document.title
+// Narrow further if you want:
+useSeoMeta({ title: "Home" } as UseSeoMetaOptions<"rss" | "nav">);
 ```
 
-### Vanilla
-
-```ts
-const seo = useSeoMeta({ title: "Home", ogUrl: location.href }, siteConfig);
-useApplySeoTag(seo); // writes into document.head
-```
-
-### Astro Layout
-
-```astro
----
-import { useSeoMeta, type SeoMetaInput } from "katanakit-js";
-import { siteConfig } from "../config/site";
-
-const seo = useSeoMeta(
-  {
-    title: Astro.props.title,
-    description: Astro.props.description,
-    ogUrl: Astro.props.url ?? Astro.url.href,
-    ogType: Astro.props.ogType ?? "website",
-  } satisfies SeoMetaInput,
-  siteConfig,
-);
----
-<head>
-  <Fragment set:html={seo.html} />
-</head>
-```
-
-### Vue / React SPA
-
-```ts
-const seo = useSeoMeta({ title: route.meta.title as string }, siteConfig);
-document.title = seo.title;
-```
-
-Legacy `useSeoTag(siteConfig, { title, url, ... })` still works and delegates to `useSeoMeta`.
+`title` = page title · `siteTitle` = brand.
 
 ---
 
