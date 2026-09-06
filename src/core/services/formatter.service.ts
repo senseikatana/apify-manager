@@ -117,6 +117,3 @@ export const {
 	useLowerCase,
 	useCapitalize,
 }: FormatterService = FormatterService.getInstance();
-
-
-export
