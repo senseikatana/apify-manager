@@ -21,32 +21,166 @@ bun add katanakit-js
 Only `@js-temporal/polyfill` is a runtime dependency. `express`, `cors`,
 `dotenv` and `@prisma/orm-postgres` are optional peer dependencies.
 
-### CDN (ESM)
+### CDN (ESM in the browser)
 
-You can also load KatanaKit directly from a CDN without a bundler:
+Prefer the **jsDelivr `/+esm`** build in the browser. It rewrites bare
+dependencies (e.g. `@js-temporal/polyfill`) so named imports work without a
+bundler or import map:
 
 ```html
 <script type="module">
-  import { useGetApi, useInitApis } from "https://cdn.jsdelivr.net/npm/katanakit-js@latest/dist/index.js";
+  import {
+    useLog,
+    useInitApis,
+    useGetApi,
+  } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
+
+  useLog("KatanaKit loaded from CDN");
+  useInitApis({
+    pokeapi: {
+      baseUri: "https://pokeapi.co/api/v2",
+      endpoints: { pokemonById: "/pokemon/:id/" },
+    },
+  });
 </script>
 ```
 
-| CDN | URL |
-|-----|-----|
-| **jsDelivr** | `https://cdn.jsdelivr.net/npm/katanakit-js@latest/dist/index.js` |
-| **unpkg** | `https://unpkg.com/katanakit-js@latest/dist/index.js` |
+| CDN | URL (browser) | Notes |
+|-----|---------------|--------|
+| **jsDelivr `/+esm`** | `https://cdn.jsdelivr.net/npm/katanakit-js/+esm` | Recommended for `<script type="module">` |
+| **esm.sh** | `https://esm.sh/katanakit-js` | Alternative ESM CDN |
+| **Raw package file** | `https://cdn.jsdelivr.net/npm/katanakit-js/dist/index.js` | Needs a bundler or an [import map](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap) for `@js-temporal/polyfill` |
+| **unpkg** | `https://unpkg.com/katanakit-js/dist/index.js` | Same caveat as the raw file |
+
+Pin a version in production (e.g. `katanakit-js@2.8.0/+esm`) instead of
+floating `@latest`.
+
+There is **no IIFE/UMD** build — only ESM (`"type": "module"`).
 
 ## Import entry points
 
 ```ts
-// Main barrel — everything except framework-heavy adapters
-import { useGetApi, useLog, useSetStorage } from "katanakit-js";
+// Main barrel — core helpers + Astro/RSS + SEO (tree-shakeable named exports)
+import {
+  useLog,
+  useInitApis,
+  useGetApi,
+  useFormatCurrency,
+  useNow,
+  useChunk,
+  ThemeService,
+  AstroService,
+  RssService,
+} from "katanakit-js";
 
-// Framework subpaths
+// Optional narrower / framework-only subpaths
+import { AstroService, RssService } from "katanakit-js/adapters/astro";
 import { useUnwrap } from "katanakit-js/adapters/nuxt";
 import { useKatanaFetch } from "katanakit-js/adapters/vue";
 import { ServerExpress } from "katanakit-js/adapters/express";
-import { RssService } from "katanakit-js/adapters/astro";
+```
+
+Every public `use*` helper lives on the main barrel (`katanakit-js`). Express,
+Nuxt, and Vue adapters stay on their subpaths because they pull optional peers.
+
+## Use in any framework (especially Astro)
+
+### Astro — frontmatter (server / SSG)
+
+```astro
+---
+// src/pages/index.astro
+import { useLog, useInitApis, useGetApi, AstroService } from "katanakit-js";
+
+useLog("Building index page");
+
+useInitApis({
+  pokeapi: {
+    baseUri: "https://pokeapi.co/api/v2",
+    endpoints: { pokemonById: "/pokemon/:id/" },
+  },
+});
+
+const result = await useGetApi<{ name: string }>("pokeapi", "pokemonById", {
+  params: { id: 25 },
+});
+---
+
+{result.ok ? <h1>{result.data.name}</h1> : <p>Failed to load</p>}
+```
+
+### Astro — client script with npm (Vite bundles it)
+
+```astro
+---
+// no server imports required for this island
+---
+<button id="log-btn">Log</button>
+
+<script>
+  import { useLog } from "katanakit-js";
+
+  document.getElementById("log-btn")?.addEventListener("click", () => {
+    useLog("Clicked from Astro client script");
+  });
+</script>
+```
+
+### Astro — client script with jsDelivr CDN
+
+Astro processes local `<script>` tags. For a **pure CDN** import, mark the
+script as external so Astro does not rewrite it:
+
+```astro
+<button id="cdn-btn">Log via CDN</button>
+
+<script is:inline type="module">
+  import { useLog, useInitApis, useGetApi } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
+
+  useInitApis({
+    pokeapi: {
+      baseUri: "https://pokeapi.co/api/v2",
+      endpoints: { pokemonById: "/pokemon/:id/" },
+    },
+  });
+
+  document.getElementById("cdn-btn")?.addEventListener("click", async () => {
+    useLog("CDN click");
+    const result = await useGetApi("pokeapi", "pokemonById", { params: { id: 25 } });
+    useLog(result.ok ? result.data : result.error);
+  });
+</script>
+```
+
+### Astro — islands (`client:*`)
+
+In a Vue/React/Svelte island, import from npm like any other dependency:
+
+```ts
+// src/components/Pokemon.vue (used as <Pokemon client:load />)
+import { useInitApis, useGetApi, useLog } from "katanakit-js";
+```
+
+### Vue / Nuxt (brief)
+
+```ts
+// Vue SFC or Nuxt plugin / server route — main barrel
+import { useLog, useInitApis, useGetApi } from "katanakit-js";
+
+// Nuxt-only helpers
+import { useUnwrap } from "katanakit-js/adapters/nuxt";
+
+// Vue reactivity wrapper around useGetApi
+import { useKatanaFetch } from "katanakit-js/adapters/vue";
+```
+
+### Vanilla HTML
+
+```html
+<script type="module">
+  import { useLog, useFormatCurrency } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
+  useLog(useFormatCurrency({ amount: 9.99, currency: "EUR", locale: "es-ES" }));
+</script>
 ```
 
 ---
@@ -550,10 +684,21 @@ export const GET = useCreateRssEndpoint({
 
 ---
 
-## SEO — `useHeadTags`
+## SEO — `useHeadTags` / `useSeoTags` (Astro)
+
+Pure builders in `src/config/` — not Vue/Nuxt reactive composables. Astro has
+no `useHead` / `useSeoMeta` that mutates `<head>` from frontmatter; build tags
+once and inject them in a Layout.
 
 ```ts
-import { type SiteConfig, useHeadTags, useGenerateMetaTags, useTitle } from "katanakit-js";
+import {
+  type SiteConfig,
+  useHeadTags,
+  useSeoTags,
+  useGenerateMetaTags,
+  useTitle,
+} from "katanakit-js";
+// Or: import { useSeoTags } from "katanakit-js/adapters/astro";
 
 const siteConfig: SiteConfig = {
   site: "https://myblog.com",
@@ -567,7 +712,7 @@ const siteConfig: SiteConfig = {
   seo: { noindex: false, canonical: true, openGraph: true, twitterCard: true, jsonLd: true },
 };
 
-// All <head> tags (title, meta, OG, Twitter Card, JSON-LD, RSS link)
+// HTML string only (title, meta, OG, Twitter Card, JSON-LD, RSS link)
 const tags = useHeadTags(siteConfig, {
   title: "My Post",
   description: "A great post",
@@ -575,6 +720,55 @@ const tags = useHeadTags(siteConfig, {
   ogType: "article",
   publishedTime: "2026-01-15T00:00:00Z",
 });
+
+// Astro-oriented: HTML + resolved fields for Layout props
+const seo = useSeoTags(siteConfig, {
+  title: "My Post",
+  description: "A great post",
+  url: "https://myblog.com/posts/my-post/",
+  ogType: "article",
+});
+// seo.html → <Fragment set:html={seo.html} />
+// seo.title / seo.description / seo.url → props or visible UI
+```
+
+### Layout.astro example
+
+```astro
+---
+// src/layouts/Layout.astro
+import { useSeoTags, type SeoMeta } from "katanakit-js";
+import { siteConfig } from "../config/site";
+
+interface Props extends SeoMeta {}
+const seo = useSeoTags(siteConfig, {
+  title: Astro.props.title,
+  description: Astro.props.description,
+  url: Astro.props.url ?? Astro.url.href,
+  ogType: Astro.props.ogType ?? "website",
+});
+---
+<!doctype html>
+<html lang={siteConfig.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <Fragment set:html={seo.html} />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+```
+
+```astro
+---
+// src/pages/index.astro
+import Layout from "../layouts/Layout.astro";
+---
+<Layout title="Home" description="Welcome" url={Astro.url.href}>
+  <h1>Home</h1>
+</Layout>
 ```
 
 ---

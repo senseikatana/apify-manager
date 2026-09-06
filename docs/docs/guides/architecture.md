@@ -139,11 +139,13 @@ to the default-exported classes (`StorageService`, `ViewportService`,
   instance (site URL, title, description, language, author, RSS options, SEO
   toggles and optional nav).
 - `seo.service.ts` — pure functions that turn `(SiteConfig, SeoMeta)` into HTML
-  strings: `useGenerateMetaTags`, `useTitle`, `useRssHeadLink` and the
-  convenience `useHeadTags`.
+  strings: `useGenerateMetaTags`, `useTitle`, `useRssHeadLink`,
+  `useHeadTags`, and Astro-oriented `useSeoTags` (`SeoTagsResult` with
+  `html` + resolved title/description/url for Layout props).
 
 Both are re-exported from the main barrel (`import { siteConfig, type
-SiteConfig, useHeadTags } from "katanakit-js"`).
+SiteConfig, useHeadTags, useSeoTags } from "katanakit-js"`) and from
+`katanakit-js/adapters/astro`.
 
 ### `prisma/` — database layer (optional)
 
@@ -170,6 +172,7 @@ and the client is not exported from the main barrel.
   | Import specifier                  | What it exposes                               |
   | --------------------------------- | --------------------------------------------- |
   | `katanakit-js`                    | astro (Astro + RSS), config (site + SEO), core, infrastructure, types |
+  | `katanakit-js/adapters/astro`     | `AstroService`, `RssService` only             |
   | `katanakit-js/adapters/express`   | Express reference adapter                     |
   | `katanakit-js/adapters/nuxt`      | Nuxt helpers                                  |
   | `katanakit-js/adapters/vue`       | Vue 3 composable                              |

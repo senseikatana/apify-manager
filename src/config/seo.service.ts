@@ -188,6 +188,109 @@ export function useHeadTags(config: SiteConfig, meta: SeoMeta): string {
 	return rssLink ? `${metaTags}\n${rssLink}` : metaTags;
 }
 
+/**
+ * Resolved SEO payload for Astro layouts (pure, non-reactive).
+ *
+ * Unlike Nuxt `useSeoMeta` / `useHead`, Astro has no reactive head in
+ * `.astro` frontmatter — build this object once and inject `html` into
+ * `<head>` (or pass the whole result as Layout props).
+ */
+export interface SeoTagsResult {
+	/** Full `<head>` HTML for `<Fragment set:html={html} />`. */
+	html: string;
+	/** Resolved document title text (with site suffix when applicable). */
+	title: string;
+	/** Resolved meta description. */
+	description: string;
+	/** Absolute page URL used for canonical / Open Graph. */
+	url: string;
+	/** Absolute OG image URL, if configured. */
+	ogImage?: string;
+	/** Page-level input meta (handy when forwarding Layout props). */
+	meta: SeoMeta;
+}
+
+/**
+ * Builds SEO tags for Astro from `SiteConfig` + page `SeoMeta`.
+ *
+ * Pure helper — no Vue/Nuxt reactivity. Call in frontmatter, then either:
+ * - inject `html` with `<Fragment set:html={seo.html} />`, or
+ * - pass `seo` (or `seo.meta`) into a Layout via props.
+ *
+ * @param config - Site-wide configuration.
+ * @param meta - Page-specific meta.
+ * @returns Resolved fields plus the HTML string for `<head>`.
+ *
+ * @example
+ * ```astro
+ * ---
+ * // src/layouts/Layout.astro
+ * import { useSeoTags, type SeoMeta } from "katanakit-js";
+ * import { siteConfig } from "../config/site";
+ *
+ * interface Props extends SeoMeta {}
+ * const seo = useSeoTags(siteConfig, {
+ *   title: Astro.props.title,
+ *   description: Astro.props.description,
+ *   url: Astro.props.url ?? Astro.url.href,
+ *   ogType: Astro.props.ogType,
+ * });
+ * ---
+ * <!doctype html>
+ * <html lang={siteConfig.lang}>
+ *   <head>
+ *     <meta charset="utf-8" />
+ *     <Fragment set:html={seo.html} />
+ *   </head>
+ *   <body>
+ *     <slot />
+ *   </body>
+ * </html>
+ * ```
+ *
+ * @example
+ * ```astro
+ * ---
+ * // src/pages/blog/[slug].astro — pass meta into the layout
+ * import Layout from "../../layouts/Layout.astro";
+ * import { useSeoTags } from "katanakit-js";
+ * import { siteConfig } from "../../config/site";
+ *
+ * const { post } = Astro.props;
+ * const seo = useSeoTags(siteConfig, {
+ *   title: post.data.title,
+ *   description: post.data.description,
+ *   url: new URL(`/blog/${post.slug}/`, siteConfig.site).href,
+ *   ogType: "article",
+ *   publishedTime: post.data.date.toISOString(),
+ * });
+ * ---
+ * <Layout title={seo.meta.title} description={seo.meta.description} url={seo.url} ogType="article">
+ *   <article set:html={post.body} />
+ * </Layout>
+ * ```
+ */
+export function useSeoTags(config: SiteConfig, meta: SeoMeta): SeoTagsResult {
+	const title = meta.title === config.title ? config.title : `${meta.title} | ${config.title}`;
+	const description = meta.description ?? config.description;
+	const url = meta.url ?? config.site;
+	const ogImageRaw = meta.ogImage ?? config.ogImage;
+	const ogImage = ogImageRaw
+		? ogImageRaw.startsWith("http")
+			? ogImageRaw
+			: `${config.site}${ogImageRaw}`
+		: undefined;
+
+	return {
+		html: useHeadTags(config, meta),
+		title,
+		description,
+		url,
+		ogImage,
+		meta,
+	};
+}
+
 // --- Internal helpers ---
 
 function escapeHtml(text: string): string {

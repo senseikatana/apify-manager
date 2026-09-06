@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { useGenerateMetaTags, useHeadTags, useRssHeadLink, useTitle } from "@/config/seo.service";
+import {
+	useGenerateMetaTags,
+	useHeadTags,
+	useRssHeadLink,
+	useSeoTags,
+	useTitle,
+} from "@/config/seo.service";
 import { type SiteConfig, siteConfig } from "@/config/site.config";
 
 const config: SiteConfig = {
@@ -141,6 +147,33 @@ describe("seo.service", () => {
 			expect(tags).toContain("<title>Blog Post | My Site</title>");
 			expect(tags).toContain('rel="alternate"');
 			expect(tags).toContain("application/rss+xml");
+		});
+	});
+
+	describe("useSeoTags", () => {
+		it("returns html plus resolved fields for Astro layouts", () => {
+			const seo = useSeoTags(config, {
+				title: "Blog Post",
+				description: "A great post",
+				url: "https://example.com/blog/post/",
+			});
+
+			expect(seo.title).toBe("Blog Post | My Site");
+			expect(seo.description).toBe("A great post");
+			expect(seo.url).toBe("https://example.com/blog/post/");
+			expect(seo.ogImage).toBe("https://example.com/og-default.png");
+			expect(seo.meta.title).toBe("Blog Post");
+			expect(seo.html).toContain("<title>Blog Post | My Site</title>");
+			expect(seo.html).toContain('rel="alternate"');
+			expect(seo.html).toBe(useHeadTags(config, seo.meta));
+		});
+
+		it("falls back to site defaults when page fields are omitted", () => {
+			const seo = useSeoTags(config, { title: "My Site" });
+
+			expect(seo.title).toBe("My Site");
+			expect(seo.description).toBe("Site description");
+			expect(seo.url).toBe("https://example.com");
 		});
 	});
 
