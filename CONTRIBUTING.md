@@ -22,17 +22,17 @@ These rules keep the codebase consistent and maintainable. Please read
    pattern when extending a service. `adapters/nuxt` is the one deliberate
    exception: it exports pure functions, not a singleton.
 3. **`use*` convention** — every public method (except `getInstance()`) uses the
-   `use` prefix (like React hooks), e.g. `useInit`, `useFetch`, `useLog`,
+   `use` prefix (like React hooks), e.g. `useInit`, `useFetch`, `useLogger`,
    `useCreateSignal`. This makes the API consistent and predictable.
 4. **Pure ESM with `.js` extensions** — the package is `"type": "module"` and
    compiles with `module: nodenext`. All relative imports **must** use an
-   explicit `.js` extension (e.g. `import { useLog } from
+   explicit `.js` extension (e.g. `import { useLogger } from
    "./logger.service.js"`). Do not import without the extension and do not add
    new `@/`-aliased imports inside `src/`; the `@/` alias exists for the test
    suite and examples only.
 5. **Destructured exports** — services expose their methods as arrow-function
    class fields and re-export them destructured at the bottom of the module
-   (`export const { useLog, ... } = LoggerService.getInstance();`) so consumers
+   (`export const { useLogger, ... } = LoggerService.getInstance();`) so consumers
    can tree-shake and call them without binding `this`. For modules whose
    consumers are expected to hold an instance (`ObserverService`,
    `SensorsUtils`, `WorkerService`), exporting the singleton instance or a

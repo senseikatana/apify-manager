@@ -30,12 +30,12 @@ bundler or import map:
 ```html
 <script type="module">
   import {
-    useLog,
+    useLogger,
     useInitApis,
     useGetApi,
   } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
 
-  useLog("KatanaKit loaded from CDN");
+  useLogger("KatanaKit loaded from CDN");
   useInitApis({
     pokeapi: {
       baseUri: "https://pokeapi.co/api/v2",
@@ -62,7 +62,7 @@ There is **no IIFE/UMD** build — only ESM (`"type": "module"`).
 ```ts
 // Main barrel — core helpers + Astro/RSS + SEO (tree-shakeable named exports)
 import {
-  useLog,
+  useLogger,
   useInitApis,
   useGetApi,
   useFormatCurrency,
@@ -90,9 +90,9 @@ Nuxt, and Vue adapters stay on their subpaths because they pull optional peers.
 ```astro
 ---
 // src/pages/index.astro
-import { useLog, useInitApis, useGetApi, AstroService } from "katanakit-js";
+import { useLogger, useInitApis, useGetApi, AstroService } from "katanakit-js";
 
-useLog("Building index page");
+useLogger("Building index page");
 
 useInitApis({
   pokeapi: {
@@ -118,10 +118,10 @@ const result = await useGetApi<{ name: string }>("pokeapi", "pokemonById", {
 <button id="log-btn">Log</button>
 
 <script>
-  import { useLog } from "katanakit-js";
+  import { useLogger } from "katanakit-js";
 
   document.getElementById("log-btn")?.addEventListener("click", () => {
-    useLog("Clicked from Astro client script");
+    useLogger("Clicked from Astro client script");
   });
 </script>
 ```
@@ -135,7 +135,7 @@ script as external so Astro does not rewrite it:
 <button id="cdn-btn">Log via CDN</button>
 
 <script is:inline type="module">
-  import { useLog, useInitApis, useGetApi } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
+  import { useLogger, useInitApis, useGetApi } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
 
   useInitApis({
     pokeapi: {
@@ -145,9 +145,9 @@ script as external so Astro does not rewrite it:
   });
 
   document.getElementById("cdn-btn")?.addEventListener("click", async () => {
-    useLog("CDN click");
+    useLogger("CDN click");
     const result = await useGetApi("pokeapi", "pokemonById", { params: { id: 25 } });
-    useLog(result.ok ? result.data : result.error);
+    useLogger(result.ok ? result.data : result.error);
   });
 </script>
 ```
@@ -158,14 +158,14 @@ In a Vue/React/Svelte island, import from npm like any other dependency:
 
 ```ts
 // src/components/Pokemon.vue (used as <Pokemon client:load />)
-import { useInitApis, useGetApi, useLog } from "katanakit-js";
+import { useInitApis, useGetApi, useLogger } from "katanakit-js";
 ```
 
 ### Vue / Nuxt (brief)
 
 ```ts
 // Vue SFC or Nuxt plugin / server route — main barrel
-import { useLog, useInitApis, useGetApi } from "katanakit-js";
+import { useLogger, useInitApis, useGetApi } from "katanakit-js";
 
 // Nuxt-only helpers
 import { useUnwrap } from "katanakit-js/adapters/nuxt";
@@ -178,8 +178,8 @@ import { useKatanaFetch } from "katanakit-js/adapters/vue";
 
 ```html
 <script type="module">
-  import { useLog, useFormatCurrency } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
-  useLog(useFormatCurrency({ amount: 9.99, currency: "EUR", locale: "es-ES" }));
+  import { useLogger, useFormatCurrency } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
+  useLogger(useFormatCurrency({ amount: 9.99, currency: "EUR", locale: "es-ES" }));
 </script>
 ```
 
@@ -295,18 +295,25 @@ discriminates the result, and TypeScript narrows the type automatically.
 ## Logger — `LoggerService`
 
 ```ts
-import { useLog, useError, LoggerService, type LogStrategy } from "katanakit-js";
+import {
+  useLogger,
+  useLoggerClear,
+  useLoggerTable,
+  useSetStrategy,
+  type LogStrategy,
+} from "katanakit-js";
 
 // Info level (default)
-useLog("Application started");
+useLogger("Application started");
 
-// Named levels
-useLog("warn", "Cache miss", { key: "user:42" });
-useLog("error", "Database timeout", { query: "SELECT * FROM users" });
-useError("Something went wrong"); // shorthand for error level
+// Level always last
+useLogger("Cache miss", { key: "user:42" }, "warn");
+useLogger("Database timeout", { query: "SELECT * FROM users" }, "error");
+useLogger("Something went wrong", "error");
 
-// Console table
-useTable([{ name: "Pikachu", type: "Electric" }]);
+// Helpers outside useLogger
+useLoggerTable([{ name: "Pikachu", type: "Electric" }]);
+useLoggerClear();
 
 // Swap output at runtime (Strategy pattern)
 const telemetryStrategy: LogStrategy = {
@@ -317,7 +324,7 @@ const telemetryStrategy: LogStrategy = {
     });
   },
 };
-LoggerService.getInstance().useSetStrategy(telemetryStrategy);
+useSetStrategy(telemetryStrategy);
 ```
 
 ---

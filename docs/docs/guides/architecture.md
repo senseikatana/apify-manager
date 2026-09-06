@@ -86,7 +86,7 @@ persists via injected storage functions from `infrastructure`.
 
 Every service is a Singleton facade (`getInstance()`), exposes arrow-function
 methods and re-exports them **destructured** at the bottom of the module
-(`export const { useLog, ... } = LoggerService.getInstance();`), which keeps
+(`export const { useLogger, ... } = LoggerService.getInstance();`), which keeps
 `this` bound and lets bundlers tree-shake unused methods.
 
 ### `infrastructure/` — the adapter layer
@@ -117,8 +117,10 @@ to the default-exported classes (`StorageService`, `ViewportService`,
 ### `adapters/` — the framework layer
 
 - `astro/` — `AstroService` (converts collections into `getStaticPaths`
-  payloads, Safe Result style) and `RssService` (RSS 2.0 XML generation and
-  Astro `GET` endpoints). Both are re-exported from the main barrel.
+  payloads, Safe Result style), `RssService` (RSS 2.0 XML generation and
+  Astro `GET` endpoints), and SEO re-exports (`useSeoTags`, `useHeadTags`,
+  …) for Layout frontmatter. Published as `katanakit-js/adapters/astro`
+  (Astro + RSS also available from the main barrel).
 - `express/` — a reference Express server (`ServerExpress`), a demo
   `ProductController` and a `router`. Published only as the
   `katanakit-js/adapters/express` subpath so the main bundle never pulls in
@@ -164,7 +166,7 @@ and the client is not exported from the main barrel.
 
 - **Pure ESM.** `package.json` has `"type": "module"`, `"module":
   "nodenext"` and `"exports"`. Source imports are relative and always carry an
-  explicit `.js` extension (e.g. `import { useLog } from
+  explicit `.js` extension (e.g. `import { useLogger } from
   "./logger.service.js"`) so the emitted `dist/` resolves identically under
   Node's ESM loader and bundlers.
 - **Exports map.**
@@ -172,7 +174,7 @@ and the client is not exported from the main barrel.
   | Import specifier                  | What it exposes                               |
   | --------------------------------- | --------------------------------------------- |
   | `katanakit-js`                    | astro (Astro + RSS), config (site + SEO), core, infrastructure, types |
-  | `katanakit-js/adapters/astro`     | `AstroService`, `RssService` only             |
+  | `katanakit-js/adapters/astro`     | `AstroService`, `RssService`, SEO helpers (`useSeoTags`, …) |
   | `katanakit-js/adapters/express`   | Express reference adapter                     |
   | `katanakit-js/adapters/nuxt`      | Nuxt helpers                                  |
   | `katanakit-js/adapters/vue`       | Vue 3 composable                              |
@@ -201,7 +203,7 @@ and the client is not exported from the main barrel.
   `use` prefix, mirroring React hooks. This makes the API consistent and
   predictable.
 - **Destructured exports** — services expose their methods as arrow-function
-  class fields and re-export them destructured (`useLog`, `useGetStorage`,
+  class fields and re-export them destructured (`useLogger`, `useGetStorage`,
   `useFetch`, ...) for `this`-safe calls and tree-shaking. `ObserverService`,
   `LazyLoaderService`, `SensorsUtils` and `WorkerService` are exceptions that
   you call through an instance (`ObserverService.getInstance()` or the exported

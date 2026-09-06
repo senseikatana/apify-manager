@@ -59,7 +59,7 @@ verified during the 2.2.1 development cycle:
 - **SSR-safe DOM** (`DomService`, `ViewportService`, `SensorsUtils`,
   `ThemeService`, `ObserverService`, `WorkerService`) guard every browser-only
   API and return `null`/`false`/no-ops when the platform API is unavailable.
-- **Log strategy injection** (`LoggerService.useSetStrategy`) lets you route
+- **Log strategy injection** (`useSetStrategy`) lets you route
   logs (and error details) through your own sink instead of `console`.
 
 ## Recommendations for production

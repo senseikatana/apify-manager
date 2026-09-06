@@ -1,4 +1,4 @@
-import { useLog } from "../../core/services/logger.service.js";
+import { useLogger } from "../../core/services/logger.service.js";
 
 import type { BatteryManager, GeoPosition } from "../../types/index.js";
 
@@ -26,14 +26,14 @@ export class SensorsUtils {
 		constraints: MediaStreamConstraints = { video: true, audio: true },
 	): Promise<MediaStream | null> {
 		if (!this.isBrowser() || !navigator.mediaDevices?.getUserMedia) {
-			useLog("warn", "[getMediaStream] API not supported in this environment.");
+			useLogger("[getMediaStream] API not supported in this environment.", "warn");
 			return null;
 		}
 
 		try {
 			return await navigator.mediaDevices.getUserMedia(constraints);
 		} catch (error) {
-			useLog("error", "[getMediaStream] Permission denied or error:", error);
+			useLogger("[getMediaStream] Permission denied or error:", error, "error");
 			return null;
 		}
 	}
@@ -67,7 +67,7 @@ export class SensorsUtils {
 					});
 				},
 				(error) => {
-					useLog("error", "[getGeolocation] Error:", error.message);
+					useLogger("[getGeolocation] Error:", error.message, "error");
 					resolve(null);
 				},
 				{ enableHighAccuracy: true, timeout: 10000, ...options },
@@ -90,7 +90,7 @@ export class SensorsUtils {
 				});
 			},
 			(error) => {
-				useLog("error", "[watchGeolocation] Error:", error.message);
+				useLogger("[watchGeolocation] Error:", error.message, "error");
 			},
 			{ enableHighAccuracy: true, ...options },
 		);
@@ -114,7 +114,7 @@ export class SensorsUtils {
 				const response = await DeviceOrientationEventExtended.requestPermission();
 				return response === "granted";
 			} catch (error) {
-				useLog("error", "[requestMotionPermission] Error:", error);
+				useLogger("[requestMotionPermission] Error:", error, "error");
 				return false;
 			}
 		}
@@ -165,7 +165,7 @@ export class SensorsUtils {
 		try {
 			return await nav.getBattery();
 		} catch (error) {
-			useLog("error", "[getBattery] Error:", error);
+			useLogger("[getBattery] Error:", error, "error");
 			return null;
 		}
 	}

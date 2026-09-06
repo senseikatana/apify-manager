@@ -8,7 +8,7 @@ import type {
 	Subscribable,
 	ToggleSignalSetter,
 } from "../../types/index.js";
-import { useLog } from "./logger.service.js";
+import { useLogger } from "./logger.service.js";
 
 /**
  * Minimal reactive kernel (Observer / Publisher-Subscriber) implemented as a
@@ -53,7 +53,7 @@ export default class ReactiveService implements IReactiveService {
 						try {
 							listener(value, oldValue);
 						} catch (error) {
-							useLog("error", "[createSignal] Listener error:", error);
+							useLogger("[createSignal] Listener error:", error, "error");
 						}
 					}
 				});
@@ -81,14 +81,14 @@ export default class ReactiveService implements IReactiveService {
 				try {
 					cleanup();
 				} catch (error) {
-					useLog("error", "[createEffect] Previous cleanup error:", error);
+					useLogger("[createEffect] Previous cleanup error:", error, "error");
 				}
 			}
 
 			try {
 				cleanup = callback() as void | (() => void);
 			} catch (error) {
-				useLog("error", "[createEffect] Effect execution error:", error);
+				useLogger("[createEffect] Effect execution error:", error, "error");
 			}
 		};
 
@@ -106,7 +106,7 @@ export default class ReactiveService implements IReactiveService {
 				try {
 					cleanup();
 				} catch (error) {
-					useLog("error", "[createEffect] Final cleanup error:", error);
+					useLogger("[createEffect] Final cleanup error:", error, "error");
 				}
 			}
 			for (const unsub of unsubscribes) {
@@ -148,7 +148,7 @@ export default class ReactiveService implements IReactiveService {
 				initial = stored;
 			}
 		} catch (error) {
-			useLog("error", `[createStorageSignal] Error reading from ${target}:`, error);
+			useLogger(`[createStorageSignal] Error reading from ${target}:`, error, "error");
 		}
 
 		const [get, set] = this.useCreateSignal<T>(initial);
@@ -160,7 +160,7 @@ export default class ReactiveService implements IReactiveService {
 				try {
 					useSetStorage(key, newValue, target);
 				} catch (error) {
-					useLog("error", `[createStorageSignal] Error writing to ${target}:`, error);
+					useLogger(`[createStorageSignal] Error writing to ${target}:`, error, "error");
 				}
 
 				return newValue;
@@ -205,7 +205,7 @@ export default class ReactiveService implements IReactiveService {
 			try {
 				callback();
 			} catch (error) {
-				useLog("error", "[createBatch] Batch block error:", error);
+				useLogger("[createBatch] Batch block error:", error, "error");
 			} finally {
 				if (!wasBatching) {
 					this.isBatching = false;

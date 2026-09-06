@@ -1,7 +1,13 @@
 import type { LogLevel, LogStrategy } from "../../types/index.js";
 
+const LOG_LEVELS: readonly LogLevel[] = ["log", "info", "warn", "error", "debug"];
+
+const isLogLevel = (value: unknown): value is LogLevel =>
+	typeof value === "string" && LOG_LEVELS.includes(value as LogLevel);
+
 /**
  * Concrete strategy: native console output.
+ * Advanced: pass an instance to {@link useSetStrategy} to redirect logs.
  */
 export class ConsoleStrategy implements LogStrategy {
 	useOutput(level: LogLevel, message: string, data?: unknown): void {
@@ -14,8 +20,13 @@ export class ConsoleStrategy implements LogStrategy {
 }
 
 /**
- * Singleton context: holds the active strategy and keeps `this` bound through
- * arrow-function methods so destructured exports remain safe.
+ * Logger facade (Singleton + Strategy).
+ *
+ * Public surface for consumers:
+ * - {@link useLogger} — all levels (`info` default; level always last)
+ * - {@link useLoggerClear} — `console.clear`
+ * - {@link useLoggerTable} — `console.table`
+ * - {@link useSetStrategy} — swap output (tests / telemetry)
  */
 export class LoggerService {
 	private static instance: LoggerService;
@@ -37,46 +48,59 @@ export class LoggerService {
 	};
 
 	/**
-	 * Overloads allow:
-	 * - message only: `useLog("message")`
-	 * - message + data: `useLog("message", { id: 1 })`
-	 * - level + message + data: `useLog("error", "something failed", { code: 500 })`
+	 * Logs a message and/or data. Level is always the **last** argument.
+	 *
+	 * @example
+	 * ```ts
+	 * import { useLogger } from "katanakit-js";
+	 *
+	 * useLogger("Application started");
+	 * useLogger("Cache miss", "warn");
+	 * useLogger("Database timeout", { query: "SELECT 1" }, "error");
+	 * useLogger({ id: 1 }, "debug");
+	 * ```
 	 */
-	public useLog: {
-		(message: string, data?: unknown): void;
-		(level: LogLevel, message: string, data?: unknown): void;
-	} = (param1: LogLevel | string, param2?: unknown, param3?: unknown): void => {
-		const levels: LogLevel[] = ["log", "info", "warn", "error", "debug"];
-
-		// Lone level token without a message — treat as a plain info message.
-		if (levels.includes(param1 as LogLevel) && param2 === undefined) {
-			this.strategy.useOutput("info", param1);
+	public useLogger: {
+		(messageOrData: unknown, level?: LogLevel): void;
+		(message: string, data: unknown, level?: LogLevel): void;
+	} = (messageOrData: unknown, dataOrLevel?: unknown, level?: LogLevel): void => {
+		if (dataOrLevel === undefined) {
+			if (typeof messageOrData === "string") {
+				this.strategy.useOutput("info", messageOrData);
+			} else {
+				this.strategy.useOutput("info", "", messageOrData);
+			}
 			return;
 		}
 
-		if (levels.includes(param1 as LogLevel)) {
-			const level = param1 as LogLevel;
-			const message = typeof param2 === "string" ? param2 : String(param2 ?? "");
-			this.strategy.useOutput(level, message, param3);
+		if (level !== undefined || !isLogLevel(dataOrLevel)) {
+			const message = typeof messageOrData === "string" ? messageOrData : String(messageOrData);
+			this.strategy.useOutput(level ?? "info", message, dataOrLevel);
 			return;
 		}
 
-		this.strategy.useOutput("info", param1, param2);
+		if (typeof messageOrData === "string") {
+			this.strategy.useOutput(dataOrLevel, messageOrData);
+		} else {
+			this.strategy.useOutput(dataOrLevel, "", messageOrData);
+		}
 	};
 
-	public useError = (message: string, data?: unknown): void => {
-		this.strategy.useOutput("error", message, data);
-	};
-
-	public useClear = (): void => {
+	public useLoggerClear = (): void => {
 		console.clear();
 	};
 
-	public useTable = (data: unknown): void => {
+	public useLoggerTable = (data: unknown): void => {
 		console.table(data);
 	};
 }
 
-// Singleton instance and destructured exports.
-export const { useClear, useLog, useError, useTable, useSetStrategy }: LoggerService =
+/**
+ * Destructured exports — what you import from `katanakit-js` / CDN:
+ *
+ * ```ts
+ * import { useLogger, useLoggerClear, useLoggerTable } from "katanakit-js";
+ * ```
+ */
+export const { useLogger, useLoggerClear, useLoggerTable, useSetStrategy }: LoggerService =
 	LoggerService.getInstance();

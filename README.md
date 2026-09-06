@@ -1,4 +1,4 @@
-# katanakit-js
+# `katanakit-js`
 
 A sharp, framework-agnostic TypeScript service toolkit organized with hexagonal architecture.
 
@@ -14,21 +14,29 @@ yarn add katanakit-js
 
 ### CDN (ESM)
 
+In the browser, use jsDelivr **`/+esm`** so named exports and dependencies resolve:
+
 ```html
 <script type="module">
-  import { useGetApi, useInitApis } from "https://cdn.jsdelivr.net/npm/katanakit-js@latest/dist/index.js";
+  import { useLogger, useGetApi, useInitApis } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
+  useLogger("ready");
 </script>
 ```
 
 | CDN | URL |
 |-----|-----|
-| **jsDelivr** | `https://cdn.jsdelivr.net/npm/katanakit-js@latest/dist/index.js` |
-| **unpkg** | `https://unpkg.com/katanakit-js@latest/dist/index.js` |
+| **jsDelivr `/+esm`** (recommended) | `https://cdn.jsdelivr.net/npm/katanakit-js/+esm` |
+| **esm.sh** | `https://esm.sh/katanakit-js` |
+| **Raw ESM file** | `https://cdn.jsdelivr.net/npm/katanakit-js/dist/index.js` (needs bundler or import map) |
+
+Pin a version in production (e.g. `@2.8.0/+esm`). There is no IIFE/UMD build.
 
 ## Quick Start
 
 ```ts
-import { useInitApis, useGetApi } from "katanakit-js";
+import { useInitApis, useGetApi, useLogger } from "katanakit-js";
+
+useLogger("boot");
 
 // Register your APIs once
 useInitApis({
@@ -57,6 +65,52 @@ if (result.ok) {
 - **Hexagonal architecture** — pure core, infrastructure adapters, framework adapters
 - **Tree-shakeable** — destructured re-exports from Singleton facades
 - **SSR-safe** — all infrastructure adapters guard or fall back gracefully in server environments
+
+## Framework usage
+
+All common `use*` helpers (`useLogger`, `useInitApis`, `useGetApi`, formatter, dates, utils, theme, …) are on the **main barrel** `katanakit-js`.
+
+### Astro (npm)
+
+```astro
+---
+// Frontmatter = server
+import { useLogger, useGetApi, useInitApis } from "katanakit-js";
+useInitApis({ /* ... */ });
+const result = await useGetApi("pokeapi", "pokemonById", { params: { id: 25 } });
+---
+<script>
+  // Client script — Vite bundles the same package
+  import { useLogger } from "katanakit-js";
+  useLogger("client");
+</script>
+```
+
+### Astro (CDN client)
+
+```astro
+<script is:inline type="module">
+  import { useLogger } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
+  useLogger("cdn");
+</script>
+```
+
+### Vue / Nuxt / vanilla
+
+```ts
+import { useLogger, useInitApis, useGetApi } from "katanakit-js";
+import { useKatanaFetch } from "katanakit-js/adapters/vue";   // Vue only
+import { useUnwrap } from "katanakit-js/adapters/nuxt";         // Nuxt only
+```
+
+```html
+<!-- vanilla -->
+<script type="module">
+  import { useLogger } from "https://cdn.jsdelivr.net/npm/katanakit-js/+esm";
+</script>
+```
+
+See [Getting Started](https://senseikatana.github.io/katanakit-js/docs/guides/getting-started) for full recipes.
 
 ## Framework Adapters
 

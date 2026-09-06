@@ -1,4 +1,4 @@
-import { useLog } from "../../core/services/logger.service.js";
+import { useLogger } from "../../core/services/logger.service.js";
 
 import type {
 	LazyLoaderEntry,
@@ -35,7 +35,7 @@ export class ObserverService {
 		autoUnobserve = true,
 	): this {
 		if (!ObserverService.useIsSupported()) {
-			useLog("warn", "[ObserverService] IntersectionObserver not supported.");
+			useLogger("[ObserverService] IntersectionObserver not supported.", "warn");
 			return this;
 		}
 
@@ -70,7 +70,7 @@ export class ObserverService {
 
 		const target = this.resolveTarget(element);
 		if (!target) {
-			useLog("warn", `[ObserverService] Target not found for key "${key}":`, element);
+			useLogger(`[ObserverService] Target not found for key "${key}":`, element, "warn");
 			return this;
 		}
 

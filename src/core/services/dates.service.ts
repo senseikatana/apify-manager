@@ -1,7 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
 
 import type { DatesServiceTypes, Locale, TemporalInput } from "../../types/index.js";
-import { useLog } from "./logger.service.js";
 
 /**
  * Facade + Adapter + Singleton over the Temporal polyfill.
@@ -123,4 +122,3 @@ export const {
 	useLastDayOfMonth,
 }: DatesService = DatesService.getInstance();
 
-useLog("log", useNowDateTime());
