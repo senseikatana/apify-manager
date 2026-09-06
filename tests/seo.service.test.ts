@@ -165,10 +165,10 @@ describe("seo.service", () => {
 			expect(seo.description).toBe("A great post");
 			expect(seo.url).toBe("https://example.com/blog/post/");
 			expect(seo.ogImage).toBe("https://example.com/og-default.png");
-			expect(seo.meta.title).toBe("Blog Post | My Site");
+			expect(seo.site).toBe("https://example.com");
+			expect(seo.siteTitle).toBe("My Site");
 			expect(seo.html).toContain("<title>Blog Post | My Site</title>");
 			expect(seo.html).toContain('rel="alternate"');
-			expect(seo.html).toBe(useHeadTags(config, seo.meta));
 			expect(seo.tags.some((t) => t.tag === "title" && t.text === "Blog Post | My Site")).toBe(
 				true,
 			);
@@ -209,9 +209,9 @@ describe("seo.service", () => {
 				seo: { noindex: false, canonical: true, openGraph: true, jsonLd: true },
 			} satisfies UseSeoMetaOptions);
 
-			expect(seo.config.site).toBe("https://example.com");
-			expect(seo.config.title).toBe("My Site");
-			expect(seo.html).toContain("<title>My Amazing Site | My Site</title>");
+			expect(seo.site).toBe("https://example.com");
+			expect(seo.siteTitle).toBe("My Site");
+			expect(seo.title).toBe("My Amazing Site | My Site");
 			expect(seo.html).toContain('<meta property="og:title" content="My Amazing Site" />');
 			expect(seo.html).toContain(
 				'<meta property="og:image" content="https://example.com/image.png" />',
@@ -254,7 +254,7 @@ describe("seo.service", () => {
 
 			expect(seo.title).toBe("Standalone | My Site");
 			expect(seo.description).toBe("No site fields in opts");
-			expect(seo.config.site).toBe("https://example.com");
+			expect(seo.site).toBe("https://example.com");
 			expect(seo.html).toContain("<title>Standalone | My Site</title>");
 			expect(seo.html).toContain(
 				'<meta property="og:image" content="https://cdn.example.com/og.png" />',

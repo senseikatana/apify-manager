@@ -1,6 +1,11 @@
 /**
  * Slim SEO types: typical HTML meta + Open Graph (Facebook) only.
  * CamelCase keys map to `<title>` / `<meta>` / `<link rel="canonical">`.
+ *
+ * Naming cheat-sheet for {@link UseSeoMetaOptions}:
+ * - `site` = base URL (`https://example.com`)
+ * - `siteTitle` = brand / site name (`"My Site"`)
+ * - `title` = **page** document title (`"Blog Post"` → often `"Blog Post | My Site"`)
  */
 
 export type SeoBooleanable = boolean | "true" | "false" | "" | 0 | 1;
@@ -41,28 +46,53 @@ export interface SeoMetaArticle {
  * Flat meta: HTML head essentials + Facebook Open Graph.
  */
 export interface SeoMetaFlat extends SeoMetaArticle {
-	/** Document `<title>`. */
+	/**
+	 * Page document title → `<title>`.
+	 * Not the site brand (`siteTitle`). When both differ, the helper usually
+	 * renders `"Page | Brand"`.
+	 */
 	title?: string;
-	/** Meta description. */
+	/**
+	 * Page summary → `<meta name="description">`.
+	 * Prefer this for the page; use `ogDescription` only to override the share preview.
+	 */
 	description?: string;
 	/** Meta keywords (legacy; optional). */
 	keywords?: string;
 	/** Meta author. */
 	author?: string;
-	/** `<link rel="canonical">`. */
+	/**
+	 * Explicit canonical URL → `<link rel="canonical">`.
+	 * Prefer this over `url` when you know the preferred address.
+	 */
 	canonical?: string;
-	/** Absolute page URL (feeds og:url / canonical defaults). */
+	/**
+	 * Absolute page URL. Fallback for canonical / `og:url` when those are omitted
+	 * (resolution order: `ogUrl` → `canonical` → `url` → `site`).
+	 */
 	url?: string;
 	charset?: "utf-8" | string;
 	viewport?: string | Record<string, string | number | undefined>;
 	robots?: "noindex, nofollow" | "index, follow" | string | SeoRobotsObject;
 
-	/** Open Graph */
+	/**
+	 * Open Graph page URL (`og:url`).
+	 * Falls back to `canonical` → `url` → `site`.
+	 */
 	ogUrl?: string;
+	/**
+	 * Open Graph title (`og:title`). Defaults to the resolved page `title` when omitted.
+	 */
 	ogTitle?: string;
+	/**
+	 * Open Graph description (`og:description`). Defaults to `description` when omitted.
+	 */
 	ogDescription?: string;
 	ogType?: "website" | "article" | "profile" | string;
 	ogLocale?: string;
+	/**
+	 * Open Graph site name (`og:site_name`). Defaults to `siteTitle` when omitted.
+	 */
 	ogSiteName?: string;
 	ogImage?: string | SeoArrayable<SeoOgImageObject>;
 	ogImageUrl?: string;
@@ -80,13 +110,18 @@ export type SeoMetaInput = {
 
 /** Site + HTML + OG fields in one object (before Omit). */
 export type UseSeoMetaBase = SeoMetaInput & {
-	/** Base URL of the site (no trailing slash). */
+	/**
+	 * Site origin / base URL (no trailing slash), e.g. `"https://example.com"`.
+	 * Not a title — used for canonical, OG, RSS, and JSON-LD defaults.
+	 */
 	site?: string;
 	/**
-	 * Site brand (SiteConfig.title / og:site_name).
-	 * Distinct from page `title`.
+	 * Site brand / product name (e.g. `"KatanaKit"`).
+	 * Distinct from page {@link SeoMetaFlat.title}.
+	 * Used as `<title>` suffix (`"Page | Brand"`), `og:site_name`, and RSS feed name.
 	 */
 	siteTitle?: string;
+	/** Language code (e.g. `"en"`, `"es-ES"`). */
 	lang?: string;
 	rss?: Partial<{
 		enabled: boolean;
@@ -106,11 +141,19 @@ export type UseSeoMetaBase = SeoMetaInput & {
 
 /**
  * Public options for {@link useSeoMeta}.
- * Only HTML + Open Graph (+ site fields). Omit keys you do not want in the type:
+ * Only HTML + Open Graph (+ site fields). Omit keys you do not want in the type.
  *
  * @example
  * ```ts
- * useSeoMeta({ title: "Home", ogImage: "/og.png" } satisfies UseSeoMetaOptions);
+ * // site = URL, siteTitle = brand, title = this page
+ * useSeoMeta({
+ *   site: "https://katanakit.dev",
+ *   siteTitle: "KatanaKit",
+ *   title: "Getting started", // → <title>Getting started | KatanaKit</title>
+ *   description: "…",
+ *   ogImage: "/og.png",
+ * } satisfies UseSeoMetaOptions);
+ *
  * useSeoMeta({ title: "Home" } as UseSeoMetaOptions<"rss" | "nav">);
  * ```
  */

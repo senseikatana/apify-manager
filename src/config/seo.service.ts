@@ -24,34 +24,25 @@ export type {
 } from "./seo-meta.types.js";
 
 /**
- * Resolved SEO payload from {@link useSeoMeta} / {@link useSeoTag}.
+ * Result of {@link useSeoMeta}: `html` / `tags` for the head, plus **one**
+ * flat object of resolved fields (site + HTML + OG). No duplicate
+ * `title` / `meta.title` / `config.title`.
  *
- * - **SSR / Astro / templates:** use `html`
- * - **Vanilla / SPA:** use `tags` + {@link useApplySeoTag}
- * - **Any framework:** use resolved fields / `config` as props
- *
- * Inside Nuxt apps prefer Nuxt's own `useSeoMeta` / `useHead`.
+ * - `title` = document title (page)
+ * - `siteTitle` = brand / site name
+ * - `html` / `tags` = what you inject into `<head>`
  */
-export interface SeoTagResult {
+export type SeoTagResult = UseSeoMetaOptions & {
 	html: string;
 	tags: SeoTagNode[];
-	title: string;
-	description: string;
-	url: string;
-	ogImage?: string;
-	/** Flat meta after defaults were merged. */
-	meta: SeoMetaInput;
-	/** Resolved {@link SiteConfig} extracted from the unified options object. */
-	config: SiteConfig;
 	jsonLd?: Record<string, unknown>;
-}
+};
 
 /** @deprecated Use {@link SeoTagResult}. */
 export type SeoTagsResult = SeoTagResult;
 
 /**
- * SEO helper: one flat object with site fields + HTML meta + Open Graph.
- * Resolves immediately (no reactivity).
+ * SEO helper: one flat object in → one flat object out (+ html/tags).
  *
  * @example
  * ```ts
@@ -62,6 +53,8 @@ export type SeoTagsResult = SeoTagResult;
  *   description: "…",
  *   ogImage: "https://example.com/image.png",
  * });
+ * // seo.title, seo.site, seo.ogImage — once each
+ * // seo.html / seo.tags — head injection
  * ```
  */
 export function useSeoMeta<OmitKeys extends keyof UseSeoMetaBase = never>(
@@ -90,14 +83,26 @@ export function useSeoMeta<OmitKeys extends keyof UseSeoMetaBase = never>(
 	const ogImage = resolveOgImageUrl(merged, config);
 
 	return {
-		html: serializeSeoTags(tags),
-		tags,
+		...merged,
+		site: config.site,
+		siteTitle: config.title,
+		lang: config.lang,
+		rss: config.rss,
+		seo: {
+			noindex: config.seo.noindex,
+			canonical: config.seo.canonical,
+			openGraph: config.seo.openGraph,
+			jsonLd: config.seo.jsonLd,
+		},
+		nav: config.nav,
 		title,
 		description,
 		url,
-		ogImage,
-		meta: merged,
-		config,
+		ogUrl: merged.ogUrl ?? url,
+		ogImage: ogImage ?? (typeof merged.ogImage === "string" ? merged.ogImage : undefined),
+		canonical: merged.canonical ?? (config.seo.canonical ? url : merged.canonical),
+		html: serializeSeoTags(tags),
+		tags,
 		jsonLd,
 	};
 }

@@ -1,22 +1,18 @@
-import { useLogger } from "@/core/index.js";
-import { useSeoMeta } from "./seo.service.js";
-
 /**
  * Site-wide configuration for KatanaKit SEO / RSS helpers.
  * Framework-agnostic — reuse in Vanilla, Astro, Vue/React SPAs, Express, etc.
  *
- * @example
- * ```ts
- * // astro.config.mjs
- * import { siteConfig } from "./src/config/site.config.js";
- * export default defineConfig({ site: siteConfig.site });
- * ```
+ * Prefer defining your own `siteConfig` in the consuming app.
+ * This default is only a demo / fallback for {@link useSeoMeta}.
+ *
+ * Do not import `useSeoMeta` here — that creates a circular dependency
+ * (`seo.service` imports `siteConfig` as defaults).
  */
 
 export interface SiteConfig {
 	/** Base URL of the site (no trailing slash). */
 	site: string;
-	/** Site title (used in `<title>`, RSS, Open Graph). */
+	/** Site brand title (not the page `<title>` — that is `title` on useSeoMeta). */
 	title: string;
 	/** Default meta description. */
 	description: string;
@@ -26,35 +22,23 @@ export interface SiteConfig {
 	author: string;
 	/** Social/OG image URL (absolute or relative to public/). */
 	ogImage?: string;
-	/** Twitter handle (without @). */
+	/** @deprecated Unused by useSeoMeta (HTML + OG only). */
 	twitter?: string;
-	/** RSS feed configuration. */
 	rss: {
-		/** Whether to enable the RSS feed (default: true). */
 		enabled: boolean;
-		/** Output path (default: "/rss.xml"). */
 		path: string;
-		/** Feed title (defaults to site title). */
 		title?: string;
-		/** Feed description (defaults to site description). */
 		description?: string;
-		/** Number of items to include (default: 20). */
 		limit: number;
 	};
-	/** Default SEO settings. */
 	seo: {
-		/** Whether to add noindex to all pages (default: false). */
 		noindex: boolean;
-		/** Whether to add the canonical URL (default: true). */
 		canonical: boolean;
-		/** Whether to add Open Graph tags (default: true). */
 		openGraph: boolean;
-		/** Whether to add Twitter Card tags (default: true). */
+		/** @deprecated Unused by useSeoMeta. */
 		twitterCard: boolean;
-		/** Whether to add JSON-LD structured data (default: true). */
 		jsonLd: boolean;
 	};
-	/** Navigation links (optional, for header/footer). */
 	nav?: Array<{
 		label: string;
 		href: string;
@@ -62,32 +46,7 @@ export interface SiteConfig {
 	}>;
 }
 
-/**
- * Default site configuration. Override in your project.
- *
- * @example
- * ```ts
- * // src/config/site.config.ts
- * import { type SiteConfig } from "katanakit";
- *
- * export const siteConfig: SiteConfig = {
- *   site: "https://myblog.com",
- *   title: "My Blog",
- *   description: "A blog about TypeScript",
- *   lang: "en",
- *   author: "John Doe",
- *   ogImage: "/og-default.png",
- *   twitter: "johndoe",
- *   rss: { enabled: true, path: "/rss.xml", limit: 20 },
- *   seo: { noindex: false, canonical: true, openGraph: true, twitterCard: true, jsonLd: true },
- *   nav: [
- *     { label: "Home", href: "/" },
- *     { label: "Blog", href: "/blog" },
- *     { label: "GitHub", href: "https://github.com/...", external: true },
- *   ],
- * };
- * ```
- */
+// /** Demo defaults — override in your project. */
 // export const siteConfig: SiteConfig = {
 // 	site: "https://example.com",
 // 	title: "My Site",
@@ -103,13 +62,80 @@ export interface SiteConfig {
 // 		noindex: false,
 // 		canonical: true,
 // 		openGraph: true,
-// 		twitterCard: true,
+// 		twitterCard: false,
 // 		jsonLd: true,
 // 	},
 // };
 
-export const seo = useSeoMeta({});
+/* 
+---
+// src/layouts/Layout.astro
+import { useSeoMeta } from "katanakit-js";
+// o: import { useSeoMeta } from "katanakit-js/adapters/astro";
 
-seo.title.toString();
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  canonical?: string;
+}
 
-seo.config.title;
+const {
+  title = "Home",
+  description = "Mi sitio con Astro",
+  ogImage,
+  canonical,
+} = Astro.props;
+
+const seo = useSeoMeta({
+  site: "https://mi-sitio.com",       // URL base del proyecto
+  siteTitle: "Mi Sitio",              // marca (sufijo del <title>)
+  title,                              // titulo de ESTA pagina
+  description,
+  url: Astro.url.href,                // URL absoluta de la pagina actual
+  canonical: canonical ?? Astro.url.href,
+  ogImage: ogImage ?? "https://mi-sitio.com/og-default.png",
+  lang: "es",
+});
+---
+
+<!doctype html>
+<html lang={seo.lang ?? "es"}>
+  <head>
+    <meta charset="utf-8" />
+	* TODO: clave de como se usa en Astro 
+    <Fragment set:html={seo.html} />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+** <head>
+  {seo.tags.map((node) => {
+    if (node.tag === "title") return <title>{node.text}</title>;
+    if (node.tag === "script")
+      return <script type="application/ld+json" set:html={node.text} />;
+    if (node.tag === "link") return <link {...node.attrs} />;
+    return <meta {...node.attrs} />;
+  })}
+</head>
+
+
+
+
+---
+// src/pages/blog/hola.astro
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  title="Hola mundo"
+  description="Mi primer post"
+  ogImage="https://mi-sitio.com/posts/hola.png"
+>
+  <article>
+    <h1>Hola mundo</h1>
+  </article>
+</Layout>
+
+*/
