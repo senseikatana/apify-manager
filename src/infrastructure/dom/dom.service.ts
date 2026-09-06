@@ -100,9 +100,7 @@ export class DomService implements IDomService {
 		const normalizedAttr = attr.toLowerCase();
 		const urlLikeAttrs = new Set(["href", "src", "xlink:href", "action", "formaction"]);
 		if (urlLikeAttrs.has(normalizedAttr) && /^\s*javascript:/i.test(value)) {
-			throw new Error(
-				`[DomService] javascript: URLs are not allowed in attribute "${attr}".`,
-			);
+			throw new Error(`[DomService] javascript: URLs are not allowed in attribute "${attr}".`);
 		}
 		if (normalizedAttr === "srcdoc" && /(?:javascript:|<script\b)/i.test(value)) {
 			throw new Error(`[DomService] Potentially unsafe srcdoc value is not allowed.`);

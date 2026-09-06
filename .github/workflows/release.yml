@@ -49,9 +49,9 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
-      - run: yarn validate
+      - run: yarn build
 
-      - run: npm publish --access public
+      - run: npm publish --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

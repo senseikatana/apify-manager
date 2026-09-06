@@ -55,8 +55,7 @@ export function useKatanaFetch(apiName, endpointName, options) {
         }
         else {
             // Ignore abort errors from superseded / unmounted requests.
-            const aborted = controller.signal.aborted ||
-                /abort/i.test(result.error.message);
+            const aborted = controller.signal.aborted || /abort/i.test(result.error.message);
             if (!aborted) {
                 error.value = result.error;
             }

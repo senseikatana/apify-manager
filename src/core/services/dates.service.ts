@@ -121,4 +121,3 @@ export const {
 	useFirstDayOfMonth,
 	useLastDayOfMonth,
 }: DatesService = DatesService.getInstance();
-

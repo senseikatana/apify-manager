@@ -1,4 +1,3 @@
-import { type SiteConfig, siteConfig as defaultSiteConfig } from "./site.config.js";
 import type {
 	SeoMeta,
 	SeoMetaInput,
@@ -8,6 +7,7 @@ import type {
 	UseSeoMetaBase,
 	UseSeoMetaOptions,
 } from "./seo-meta.types.js";
+import { siteConfig as defaultSiteConfig, type SiteConfig } from "./site.config.js";
 
 export type {
 	SeoArrayable,
@@ -156,8 +156,7 @@ function splitUseSeoMetaOptions(
 			(typeof metaRest.description === "string" ? metaRest.description : undefined) ??
 			defaults.description,
 		lang: lang ?? defaults.lang,
-		author:
-			(typeof metaRest.author === "string" ? metaRest.author : undefined) ?? defaults.author,
+		author: (typeof metaRest.author === "string" ? metaRest.author : undefined) ?? defaults.author,
 		ogImage:
 			typeof metaRest.ogImage === "string" ? metaRest.ogImage : (defaults.ogImage ?? undefined),
 		twitter: defaults.twitter,
@@ -182,7 +181,7 @@ function splitUseSeoMetaOptions(
 }
 
 /**
- * Applies {@link SeoTagResult.tags} into `document.head` (Vanilla / SPA).
+ * Applies tags from a {@link SeoTagResult} into `document.head` (Vanilla / SPA).
  * No-op when `document` is unavailable (SSR).
  */
 export function useApplySeoTag(
@@ -281,9 +280,7 @@ function mergeSeoDefaults(input: SeoMetaInput, config?: SiteConfig): SeoMetaInpu
 	const pageTitle = input.title ?? config.title;
 	const siteSuffix = ` | ${config.title}`;
 	const alreadySuffixed =
-		typeof pageTitle === "string" &&
-		pageTitle !== config.title &&
-		pageTitle.endsWith(siteSuffix);
+		typeof pageTitle === "string" && pageTitle !== config.title && pageTitle.endsWith(siteSuffix);
 	const title =
 		pageTitle === config.title || !pageTitle || alreadySuffixed
 			? (pageTitle ?? config.title)
@@ -460,14 +457,16 @@ function flattenOgImage(raw: unknown, config?: SiteConfig): SeoTagNode[] {
 				attrs: { property: `${prop}:secure_url`, content: String(obj.secureUrl) },
 			});
 		}
-		if (obj.type) tags.push({ tag: "meta", attrs: { property: `${prop}:type`, content: String(obj.type) } });
+		if (obj.type)
+			tags.push({ tag: "meta", attrs: { property: `${prop}:type`, content: String(obj.type) } });
 		if (obj.width != null) {
 			tags.push({ tag: "meta", attrs: { property: `${prop}:width`, content: String(obj.width) } });
 		}
 		if (obj.height != null) {
 			tags.push({ tag: "meta", attrs: { property: `${prop}:height`, content: String(obj.height) } });
 		}
-		if (obj.alt) tags.push({ tag: "meta", attrs: { property: `${prop}:alt`, content: String(obj.alt) } });
+		if (obj.alt)
+			tags.push({ tag: "meta", attrs: { property: `${prop}:alt`, content: String(obj.alt) } });
 	}
 	return tags;
 }

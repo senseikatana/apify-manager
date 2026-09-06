@@ -1,5 +1,8 @@
+const LOG_LEVELS = ["log", "info", "warn", "error", "debug"];
+const isLogLevel = (value) => typeof value === "string" && LOG_LEVELS.includes(value);
 /**
  * Concrete strategy: native console output.
+ * Advanced: pass an instance to {@link useSetStrategy} to redirect logs.
  */
 export class ConsoleStrategy {
     useOutput(level, message, data) {
@@ -11,8 +14,13 @@ export class ConsoleStrategy {
     }
 }
 /**
- * Singleton context: holds the active strategy and keeps `this` bound through
- * arrow-function methods so destructured exports remain safe.
+ * Logger facade (Singleton + Strategy).
+ *
+ * Public surface for consumers:
+ * - {@link useLogger} — all levels (`info` default; level always last)
+ * - {@link useLoggerClear} — `console.clear`
+ * - {@link useLoggerTable} — `console.table`
+ * - {@link useSetStrategy} — swap output (tests / telemetry)
  */
 export class LoggerService {
     static instance;
@@ -30,36 +38,53 @@ export class LoggerService {
         this.strategy = strategy;
     };
     /**
-     * Overloads allow:
-     * - message only: `useLog("message")`
-     * - message + data: `useLog("message", { id: 1 })`
-     * - level + message + data: `useLog("error", "something failed", { code: 500 })`
+     * Logs a message and/or data. Level is always the **last** argument.
+     *
+     * @example
+     * ```ts
+     * import { useLogger } from "katanakit-js";
+     *
+     * useLogger("Application started");
+     * useLogger("Cache miss", "warn");
+     * useLogger("Database timeout", { query: "SELECT 1" }, "error");
+     * useLogger({ id: 1 }, "debug");
+     * ```
      */
-    useLog = (param1, param2, param3) => {
-        const levels = ["log", "info", "warn", "error", "debug"];
-        // Lone level token without a message — treat as a plain info message.
-        if (levels.includes(param1) && param2 === undefined) {
-            this.strategy.useOutput("info", param1);
+    useLogger = (messageOrData, dataOrLevel, level) => {
+        if (dataOrLevel === undefined) {
+            if (typeof messageOrData === "string") {
+                this.strategy.useOutput("info", messageOrData);
+            }
+            else {
+                this.strategy.useOutput("info", "", messageOrData);
+            }
             return;
         }
-        if (levels.includes(param1)) {
-            const level = param1;
-            const message = typeof param2 === "string" ? param2 : String(param2 ?? "");
-            this.strategy.useOutput(level, message, param3);
+        if (level !== undefined || !isLogLevel(dataOrLevel)) {
+            const message = typeof messageOrData === "string" ? messageOrData : String(messageOrData);
+            this.strategy.useOutput(level ?? "info", message, dataOrLevel);
             return;
         }
-        this.strategy.useOutput("info", param1, param2);
+        if (typeof messageOrData === "string") {
+            this.strategy.useOutput(dataOrLevel, messageOrData);
+        }
+        else {
+            this.strategy.useOutput(dataOrLevel, "", messageOrData);
+        }
     };
-    useError = (message, data) => {
-        this.strategy.useOutput("error", message, data);
-    };
-    useClear = () => {
+    useLoggerClear = () => {
         console.clear();
     };
-    useTable = (data) => {
+    useLoggerTable = (data) => {
         console.table(data);
     };
 }
-// Singleton instance and destructured exports.
-export const { useClear, useLog, useError, useTable, useSetStrategy } = LoggerService.getInstance();
+/**
+ * Destructured exports — what you import from `katanakit-js` / CDN:
+ *
+ * ```ts
+ * import { useLogger, useLoggerClear, useLoggerTable } from "katanakit-js";
+ * ```
+ */
+export const { useLogger, useLoggerClear, useLoggerTable, useSetStrategy } = LoggerService.getInstance();
 //# sourceMappingURL=logger.service.js.map

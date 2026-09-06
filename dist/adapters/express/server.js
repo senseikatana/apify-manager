@@ -1,6 +1,6 @@
 import cors from "cors";
 import express from "express";
-import { useLog } from "../../core/services/logger.service.js";
+import { useLogger } from "../../core/services/logger.service.js";
 import router from "./router.js";
 export default class ServerExpress {
     static instance;
@@ -31,7 +31,7 @@ export default class ServerExpress {
         this.setupRoutes();
         this.setupErrorHandling();
         this.app.listen(this.port, this.host, () => {
-            useLog(`Server running on http://${this.host}:${this.port}`);
+            useLogger(`Server running on http://${this.host}:${this.port}`);
         });
     };
     useGetApp = () => this.app;

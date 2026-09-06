@@ -1,4 +1,4 @@
-import { useLog } from "./logger.service.js";
+import { useLogger } from "./logger.service.js";
 /**
  * Timing utilities: delays, debouncing, throttling and timeouts.
  * Implemented as a Singleton facade with factory methods.
@@ -57,7 +57,7 @@ export default class TimingService {
                 await callback();
             }
             catch (error) {
-                useLog("error", "[interval] Callback error:", error);
+                useLogger("[interval] Callback error:", error, "error");
             }
             finally {
                 isExecuting = false;
@@ -114,7 +114,7 @@ export default class TimingService {
                     func(...args);
                 }
                 catch (error) {
-                    useLog("error", "[debounce] Callback error:", error);
+                    useLogger("[debounce] Callback error:", error, "error");
                 }
                 timeoutId = undefined;
             }, delayMs);
@@ -138,7 +138,7 @@ export default class TimingService {
                     func(...args);
                 }
                 catch (error) {
-                    useLog("error", "[debounceImmediate] Callback error:", error);
+                    useLogger("[debounceImmediate] Callback error:", error, "error");
                 }
             }
             if (timeoutId !== undefined) {
@@ -150,7 +150,7 @@ export default class TimingService {
                         func(...lastArgs);
                     }
                     catch (error) {
-                        useLog("error", "[debounceImmediate] Callback error:", error);
+                        useLogger("[debounceImmediate] Callback error:", error, "error");
                     }
                 }
                 invoked = false;
@@ -167,7 +167,7 @@ export default class TimingService {
                     func(...args);
                 }
                 catch (error) {
-                    useLog("error", "[throttle] Callback error:", error);
+                    useLogger("[throttle] Callback error:", error, "error");
                 }
                 inThrottle = true;
                 setTimeout(() => {
@@ -185,7 +185,7 @@ export default class TimingService {
                     func(...args);
                 }
                 catch (error) {
-                    useLog("error", "[throttleTrailing] Callback error:", error);
+                    useLogger("[throttleTrailing] Callback error:", error, "error");
                 }
                 inThrottle = true;
                 lastArgs = null;
@@ -196,7 +196,7 @@ export default class TimingService {
                             func(...lastArgs);
                         }
                         catch (error) {
-                            useLog("error", "[throttleTrailing] Callback error:", error);
+                            useLogger("[throttleTrailing] Callback error:", error, "error");
                         }
                     }
                 }, limitMs);
@@ -212,7 +212,7 @@ export default class TimingService {
                 await callback(i);
             }
             catch (error) {
-                useLog("error", "[repeat] Callback error:", error);
+                useLogger("[repeat] Callback error:", error, "error");
             }
             if (i < iterations - 1 && delayMs > 0) {
                 await this.useDelay(delayMs);

@@ -1,42 +1,14 @@
 /**
- * Site-wide configuration for KatanaKit-powered Astro projects.
+ * Site-wide configuration for KatanaKit SEO / RSS helpers.
+ * Framework-agnostic — reuse in Vanilla, Astro, Vue/React SPAs, Express, etc.
  *
- * Import this in your layouts, RSS endpoint, and SEO components
- * to keep everything consistent.
+ * Prefer defining your own `siteConfig` in the consuming app.
+ * This default is only a demo / fallback for {@link useSeoMeta}.
  *
- * @example
- * ```ts
- * // astro.config.mjs
- * import { siteConfig } from "./src/config/site.config.js";
- * export default defineConfig({ site: siteConfig.site });
- * ```
+ * Do not import `useSeoMeta` here — that creates a circular dependency
+ * (`seo.service` imports `siteConfig` as defaults).
  */
-/**
- * Default site configuration. Override in your project.
- *
- * @example
- * ```ts
- * // src/config/site.config.ts
- * import { type SiteConfig } from "katanakit";
- *
- * export const siteConfig: SiteConfig = {
- *   site: "https://myblog.com",
- *   title: "My Blog",
- *   description: "A blog about TypeScript",
- *   lang: "en",
- *   author: "John Doe",
- *   ogImage: "/og-default.png",
- *   twitter: "johndoe",
- *   rss: { enabled: true, path: "/rss.xml", limit: 20 },
- *   seo: { noindex: false, canonical: true, openGraph: true, twitterCard: true, jsonLd: true },
- *   nav: [
- *     { label: "Home", href: "/" },
- *     { label: "Blog", href: "/blog" },
- *     { label: "GitHub", href: "https://github.com/...", external: true },
- *   ],
- * };
- * ```
- */
+/** Demo defaults — override in your project. */
 export const siteConfig = {
     site: "https://example.com",
     title: "My Site",
@@ -52,7 +24,7 @@ export const siteConfig = {
         noindex: false,
         canonical: true,
         openGraph: true,
-        twitterCard: true,
+        twitterCard: false,
         jsonLd: true,
     },
 };

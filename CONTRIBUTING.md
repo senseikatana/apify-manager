@@ -73,25 +73,20 @@ git checkout dev
 bun install
 ```
 
-Useful scripts (all runnable with `yarn` or `bun run`):
+Useful scripts (prefer `yarn run <script>` when the name clashes with a Yarn built-in, e.g. `yarn run check`):
 
-| Command               | Description                                   |
-| --------------------- | --------------------------------------------- |
-| `yarn typecheck`      | Type-check the project (`tsc --noEmit`)       |
-| `yarn build`          | Build to `dist/` (declarations + ESM)         |
-| `yarn check`          | Biome lint + format check on `src/`           |
-| `yarn check:fix`      | Auto-fix Biome issues                         |
-| `yarn lint` / `lint:fix` | Lint `src/` with Biome                     |
-| `yarn format` / `format:fix` | Format `src/` with Biome                |
-| `yarn test`           | Run the Vitest suite                          |
-| `yarn test:watch`     | Run Vitest in watch mode                      |
-| `yarn dev`            | Start the Express example server              |
-| `yarn validate`       | Run check + test + build (full validation)    |
-| `yarn release:patch` / `:minor` / `:major` / `:beta` | Validate + version bump + `yarn publish` |
-| `yarn docs:dev`       | Start the docs site dev server (Astro Starlight) |
-| `yarn docs:build`     | Build the docs site                           |
+| Command | Description |
+| ------- | ----------- |
+| `yarn validate` | Biome + typecheck + tests (no `dist/`) |
+| `yarn build` | `validate` then compile to `dist/` |
+| `yarn test` / `test:watch` | Vitest |
+| `yarn check` / `check:fix` | Biome check / auto-fix |
+| `yarn typecheck` | `tsc --noEmit` |
+| `yarn docs:dev` / `docs:build` / `docs:preview` | Docs site (`docs:build` runs `validate` first) |
+| `yarn release:patch` / `:minor` / `:major` | `build` → version bump → publish |
+| `yarn dev` / `start` | Express example server |
 
-`prepublishOnly` runs `validate` (check + test + build) before every publish.
+`build`, `docs:build`, `prepublishOnly` and `release:*` never compile or publish unless `validate` passes.
 
 ## Directory layout
 
@@ -141,10 +136,9 @@ and keeps a [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)-style
 the `release:*` scripts to cut a release:
 
 ```bash
-yarn release:patch   # validate + bump patch + yarn publish
-yarn release:minor   # validate + bump minor + yarn publish
-yarn release:major   # validate + bump major + yarn publish
-yarn release:beta    # validate + bump prerelease + yarn publish --tag beta
+yarn release:patch   # build (validate + compile) + bump patch + publish
+yarn release:minor   # same for minor
+yarn release:major   # same for major
 ```
 
 The release workflow on GitHub Actions creates a tag and GitHub release on every

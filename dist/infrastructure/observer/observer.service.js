@@ -1,4 +1,4 @@
-import { useLog } from "../../core/services/logger.service.js";
+import { useLogger } from "../../core/services/logger.service.js";
 /**
  * Singleton wrapper around the native IntersectionObserver API.
  */
@@ -17,7 +17,7 @@ export class ObserverService {
     }
     useCreate(key, callback, options = { threshold: 0.1 }, autoUnobserve = true) {
         if (!ObserverService.useIsSupported()) {
-            useLog("warn", "[ObserverService] IntersectionObserver not supported.");
+            useLogger("[ObserverService] IntersectionObserver not supported.", "warn");
             return this;
         }
         if (this.registry.has(key)) {
@@ -46,7 +46,7 @@ export class ObserverService {
             return this;
         const target = this.resolveTarget(element);
         if (!target) {
-            useLog("warn", `[ObserverService] Target not found for key "${key}":`, element);
+            useLogger(`[ObserverService] Target not found for key "${key}":`, element, "warn");
             return this;
         }
         entry.targets.add(target);

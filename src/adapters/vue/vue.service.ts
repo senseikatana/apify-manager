@@ -81,9 +81,7 @@ export function useKatanaFetch<T>(
 			error.value = null;
 		} else {
 			// Ignore abort errors from superseded / unmounted requests.
-			const aborted =
-				controller.signal.aborted ||
-				/abort/i.test(result.error.message);
+			const aborted = controller.signal.aborted || /abort/i.test(result.error.message);
 			if (!aborted) {
 				error.value = result.error;
 			}
@@ -94,9 +92,13 @@ export function useKatanaFetch<T>(
 
 	// Refetch automatically when a reactive options ref changes.
 	if (isRef(options)) {
-		watch(options, () => {
-			void refetch();
-		}, { deep: true });
+		watch(
+			options,
+			() => {
+				void refetch();
+			},
+			{ deep: true },
+		);
 	}
 
 	// Dispose on unmount when running inside a component setup.

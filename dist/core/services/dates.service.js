@@ -1,5 +1,4 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { useLog } from "./logger.service.js";
 /**
  * Facade + Adapter + Singleton over the Temporal polyfill.
  *
@@ -66,5 +65,4 @@ export class DatesService {
 }
 // Singleton instance and destructured exports.
 export const { useDiff, useFormat, useNow, useNowDateTime, useAddDays, useSubtractDays, useIsEqual, useIsBefore, useIsAfter, useFirstDayOfMonth, useLastDayOfMonth, } = DatesService.getInstance();
-useLog("log", useNowDateTime());
 //# sourceMappingURL=dates.service.js.map
