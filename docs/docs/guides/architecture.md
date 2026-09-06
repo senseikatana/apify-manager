@@ -118,7 +118,7 @@ to the default-exported classes (`StorageService`, `ViewportService`,
 
 - `astro/` — `AstroService` (converts collections into `getStaticPaths`
   payloads, Safe Result style), `RssService` (RSS 2.0 XML generation and
-  Astro `GET` endpoints), and SEO re-exports (`useSeoTags`, `useHeadTags`,
+  Astro `GET` endpoints), and SEO re-exports (`useSeoTag`, `useHeadTags`,
   …) for Layout frontmatter. Published as `katanakit-js/adapters/astro`
   (Astro + RSS also available from the main barrel).
 - `express/` — a reference Express server (`ServerExpress`), a demo
@@ -140,13 +140,14 @@ to the default-exported classes (`StorageService`, `ViewportService`,
 - `site.config.ts` — the `SiteConfig` interface and a default `siteConfig`
   instance (site URL, title, description, language, author, RSS options, SEO
   toggles and optional nav).
-- `seo.service.ts` — pure functions that turn `(SiteConfig, SeoMeta)` into HTML
-  strings: `useGenerateMetaTags`, `useTitle`, `useRssHeadLink`,
-  `useHeadTags`, and Astro-oriented `useSeoTags` (`SeoTagsResult` with
-  `html` + resolved title/description/url for Layout props).
+- `seo.service.ts` — pure Nuxt-inspired `useSeoMeta(input, config?)` flat object
+  API (`SeoMetaInput` / `SeoMetaFlat`: OG, Twitter, article, robots, canonical,
+  …), plus `useApplySeoTag` (Vanilla), legacy `useSeoTag`, and helpers
+  `useGenerateMetaTags`, `useTitle`, `useRssHeadLink`, `useHeadTags`. Prefer
+  Nuxt's own head APIs inside Nuxt.
 
 Both are re-exported from the main barrel (`import { siteConfig, type
-SiteConfig, useHeadTags, useSeoTags } from "katanakit-js"`) and from
+SiteConfig, useSeoMeta } from "katanakit-js"`) and from
 `katanakit-js/adapters/astro`.
 
 ### `prisma/` — database layer (optional)
@@ -174,7 +175,7 @@ and the client is not exported from the main barrel.
   | Import specifier                  | What it exposes                               |
   | --------------------------------- | --------------------------------------------- |
   | `katanakit-js`                    | astro (Astro + RSS), config (site + SEO), core, infrastructure, types |
-  | `katanakit-js/adapters/astro`     | `AstroService`, `RssService`, SEO helpers (`useSeoTags`, …) |
+  | `katanakit-js/adapters/astro`     | `AstroService`, `RssService`, SEO re-exports (`useSeoTag`, …) |
   | `katanakit-js/adapters/express`   | Express reference adapter                     |
   | `katanakit-js/adapters/nuxt`      | Nuxt helpers                                  |
   | `katanakit-js/adapters/vue`       | Vue 3 composable                              |

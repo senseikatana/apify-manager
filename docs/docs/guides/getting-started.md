@@ -691,21 +691,16 @@ export const GET = useCreateRssEndpoint({
 
 ---
 
-## SEO — `useHeadTags` / `useSeoTags` (Astro)
+## SEO — `useSeoMeta` (Nuxt-style, framework-agnostic)
 
-Pure builders in `src/config/` — not Vue/Nuxt reactive composables. Astro has
-no `useHead` / `useSeoMeta` that mutates `<head>` from frontmatter; build tags
-once and inject them in a Layout.
+Pure builders in `src/config/`. Flat object API inspired by Nuxt `useSeoMeta`,
+without Vue reactivity.
+
+**Use KatanaKit SEO for:** Vanilla JS, Astro, Vue/React SPAs, Express HTML.
+**Inside Nuxt:** prefer Nuxt's own `useSeoMeta` / `useHead`.
 
 ```ts
-import {
-  type SiteConfig,
-  useHeadTags,
-  useSeoTags,
-  useGenerateMetaTags,
-  useTitle,
-} from "katanakit-js";
-// Or: import { useSeoTags } from "katanakit-js/adapters/astro";
+import { useSeoMeta, useApplySeoTag, type SiteConfig, type SeoMetaInput } from "katanakit-js";
 
 const siteConfig: SiteConfig = {
   site: "https://myblog.com",
@@ -719,64 +714,62 @@ const siteConfig: SiteConfig = {
   seo: { noindex: false, canonical: true, openGraph: true, twitterCard: true, jsonLd: true },
 };
 
-// HTML string only (title, meta, OG, Twitter Card, JSON-LD, RSS link)
-const tags = useHeadTags(siteConfig, {
-  title: "My Post",
-  description: "A great post",
-  url: "https://myblog.com/posts/my-post/",
-  ogType: "article",
-  publishedTime: "2026-01-15T00:00:00Z",
-});
-
-// Astro-oriented: HTML + resolved fields for Layout props
-const seo = useSeoTags(siteConfig, {
-  title: "My Post",
-  description: "A great post",
-  url: "https://myblog.com/posts/my-post/",
-  ogType: "article",
-});
-// seo.html → <Fragment set:html={seo.html} />
-// seo.title / seo.description / seo.url → props or visible UI
+const seo = useSeoMeta(
+  {
+    title: "My Amazing Site",
+    ogTitle: "My Amazing Site",
+    description: "This is my amazing site",
+    ogDescription: "This is my amazing site",
+    ogImage: "https://example.com/image.png",
+    twitterCard: "summary_large_image",
+    ogType: "article",
+    articlePublishedTime: "2026-01-15T00:00:00Z",
+    canonical: "https://myblog.com/posts/my-post/",
+  } satisfies SeoMetaInput,
+  siteConfig,
+);
+// seo.html  → SSR / Astro / template injection
+// seo.tags  → Vanilla / SPA programmatic nodes
+// seo.title / description / url / ogImage → props / document.title
 ```
 
-### Layout.astro example
+### Vanilla
+
+```ts
+const seo = useSeoMeta({ title: "Home", ogUrl: location.href }, siteConfig);
+useApplySeoTag(seo); // writes into document.head
+```
+
+### Astro Layout
 
 ```astro
 ---
-// src/layouts/Layout.astro
-import { useSeoTags, type SeoMeta } from "katanakit-js";
+import { useSeoMeta, type SeoMetaInput } from "katanakit-js";
 import { siteConfig } from "../config/site";
 
-interface Props extends SeoMeta {}
-const seo = useSeoTags(siteConfig, {
-  title: Astro.props.title,
-  description: Astro.props.description,
-  url: Astro.props.url ?? Astro.url.href,
-  ogType: Astro.props.ogType ?? "website",
-});
+const seo = useSeoMeta(
+  {
+    title: Astro.props.title,
+    description: Astro.props.description,
+    ogUrl: Astro.props.url ?? Astro.url.href,
+    ogType: Astro.props.ogType ?? "website",
+  } satisfies SeoMetaInput,
+  siteConfig,
+);
 ---
-<!doctype html>
-<html lang={siteConfig.lang}>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <Fragment set:html={seo.html} />
-  </head>
-  <body>
-    <slot />
-  </body>
-</html>
+<head>
+  <Fragment set:html={seo.html} />
+</head>
 ```
 
-```astro
----
-// src/pages/index.astro
-import Layout from "../layouts/Layout.astro";
----
-<Layout title="Home" description="Welcome" url={Astro.url.href}>
-  <h1>Home</h1>
-</Layout>
+### Vue / React SPA
+
+```ts
+const seo = useSeoMeta({ title: route.meta.title as string }, siteConfig);
+document.title = seo.title;
 ```
+
+Legacy `useSeoTag(siteConfig, { title, url, ... })` still works and delegates to `useSeoMeta`.
 
 ---
 

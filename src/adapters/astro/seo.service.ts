@@ -1,16 +1,24 @@
 /**
- * Astro SEO adapter — re-exports the pure config helpers with Astro-oriented naming.
+ * Astro convenience re-exports of the framework-agnostic SEO helpers.
+ * Prefer importing from `katanakit-js` directly.
  *
- * Astro has no Nuxt-style reactive `useHead` / `useSeoMeta` in `.astro` frontmatter.
- * Use `useSeoTags` (or `useHeadTags`) to build HTML / props, then inject into
- * `<head>` via Layout props or `<Fragment set:html={...} />`.
+ * Inside Nuxt apps use Nuxt's own `useSeoMeta` / `useHead` instead.
  */
+export type {
+	SeoMeta,
+	SeoMetaFlat,
+	SeoMetaInput,
+	SeoTagNode,
+	SeoTagResult,
+	SeoTagsResult,
+} from "../../config/seo.service.js";
 export {
-	type SeoMeta,
-	type SeoTagsResult,
+	useApplySeoTag,
 	useGenerateMetaTags,
 	useHeadTags,
 	useRssHeadLink,
+	useSeoMeta,
+	useSeoTag,
 	useSeoTags,
 	useTitle,
 } from "../../config/seo.service.js";

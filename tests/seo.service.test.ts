@@ -3,6 +3,8 @@ import {
 	useGenerateMetaTags,
 	useHeadTags,
 	useRssHeadLink,
+	useSeoMeta,
+	useSeoTag,
 	useSeoTags,
 	useTitle,
 } from "@/config/seo.service";
@@ -150,9 +152,9 @@ describe("seo.service", () => {
 		});
 	});
 
-	describe("useSeoTags", () => {
-		it("returns html plus resolved fields for Astro layouts", () => {
-			const seo = useSeoTags(config, {
+	describe("useSeoTag", () => {
+		it("returns html, tags, and resolved fields (framework-agnostic)", () => {
+			const seo = useSeoTag(config, {
 				title: "Blog Post",
 				description: "A great post",
 				url: "https://example.com/blog/post/",
@@ -162,18 +164,92 @@ describe("seo.service", () => {
 			expect(seo.description).toBe("A great post");
 			expect(seo.url).toBe("https://example.com/blog/post/");
 			expect(seo.ogImage).toBe("https://example.com/og-default.png");
-			expect(seo.meta.title).toBe("Blog Post");
+			expect(seo.meta.title).toBe("Blog Post | My Site");
 			expect(seo.html).toContain("<title>Blog Post | My Site</title>");
 			expect(seo.html).toContain('rel="alternate"');
 			expect(seo.html).toBe(useHeadTags(config, seo.meta));
+			expect(seo.tags.some((t) => t.tag === "title" && t.text === "Blog Post | My Site")).toBe(
+				true,
+			);
+			expect(seo.tags.some((t) => t.tag === "link" && t.attrs?.rel === "alternate")).toBe(true);
 		});
 
 		it("falls back to site defaults when page fields are omitted", () => {
-			const seo = useSeoTags(config, { title: "My Site" });
+			const seo = useSeoTag(config, { title: "My Site" });
 
 			expect(seo.title).toBe("My Site");
 			expect(seo.description).toBe("Site description");
 			expect(seo.url).toBe("https://example.com");
+		});
+
+		it("keeps useSeoTags as an alias", () => {
+			expect(useSeoTags(config, { title: "Alias" }).title).toBe(
+				useSeoTag(config, { title: "Alias" }).title,
+			);
+		});
+	});
+
+	describe("useSeoMeta", () => {
+		it("accepts a Nuxt-style flat object and resolves immediately", () => {
+			const seo = useSeoMeta(
+				{
+					title: "My Amazing Site",
+					ogTitle: "My Amazing Site",
+					description: "This is my amazing site",
+					ogDescription: "This is my amazing site",
+					ogImage: "https://example.com/image.png",
+					twitterCard: "summary_large_image",
+					ogType: "website",
+					canonical: "https://example.com/",
+					robots: "index, follow",
+				},
+				config,
+			);
+
+			expect(seo.html).toContain("<title>My Amazing Site | My Site</title>");
+			expect(seo.html).toContain('<meta property="og:title" content="My Amazing Site" />');
+			expect(seo.html).toContain(
+				'<meta property="og:image" content="https://example.com/image.png" />',
+			);
+			expect(seo.html).toContain('<meta name="twitter:card" content="summary_large_image" />');
+			expect(seo.html).toContain('<link rel="canonical" href="https://example.com/" />');
+			expect(seo.html).toContain('<meta name="robots" content="index, follow" />');
+			expect(seo.tags.length).toBeGreaterThan(5);
+		});
+
+		it("supports structured robots and article tags", () => {
+			const seo = useSeoMeta(
+				{
+					title: "Article",
+					ogType: "article",
+					articlePublishedTime: "2024-01-15T00:00:00Z",
+					articleTag: ["typescript", "seo"],
+					robots: { noindex: true, nofollow: true },
+				},
+				config,
+			);
+
+			expect(seo.html).toContain(
+				'<meta property="article:published_time" content="2024-01-15T00:00:00Z" />',
+			);
+			expect(seo.html).toContain('<meta property="article:tag" content="typescript" />');
+			expect(seo.html).toContain('<meta name="robots" content="noindex, nofollow" />');
+		});
+
+		it("works without site config (pure flat input)", () => {
+			const seo = useSeoMeta({
+				title: "Standalone",
+				description: "No site config",
+				ogImage: "https://cdn.example.com/og.png",
+			});
+
+			expect(seo.title).toBe("Standalone");
+			expect(seo.description).toBe("No site config");
+			expect(seo.html).toContain("<title>Standalone</title>");
+			expect(seo.html).toContain(
+				'<meta property="og:image" content="https://cdn.example.com/og.png" />',
+			);
+			expect(seo.html).not.toContain("application/rss+xml");
 		});
 	});
 

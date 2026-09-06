@@ -1,8 +1,6 @@
 /**
- * Site-wide configuration for KatanaKit-powered Astro projects.
- *
- * Import this in your layouts, RSS endpoint, and SEO components
- * to keep everything consistent.
+ * Site-wide configuration for KatanaKit SEO / RSS helpers.
+ * Framework-agnostic — reuse in Vanilla, Astro, Vue/React SPAs, Express, etc.
  *
  * @example
  * ```ts
