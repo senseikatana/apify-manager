@@ -4,6 +4,8 @@ import type { ScrollOptions, ScrollPosition, ViewportSize } from "../../types/in
  */
 export default class ViewportService {
     private static instance;
+    private tempTitleTimer;
+    private tempTitleOriginal;
     private constructor();
     static getInstance(): ViewportService;
     private isBrowser;

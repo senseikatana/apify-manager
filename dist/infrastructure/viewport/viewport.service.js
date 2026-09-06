@@ -3,6 +3,8 @@
  */
 export default class ViewportService {
     static instance;
+    tempTitleTimer;
+    tempTitleOriginal;
     constructor() { }
     static getInstance() {
         if (!ViewportService.instance) {
@@ -131,12 +133,20 @@ export default class ViewportService {
     useSetTempTitle = (tempTitle, durationMs = 3000) => {
         if (!this.isBrowser())
             return;
-        const original = document.title;
+        if (this.tempTitleTimer !== undefined) {
+            clearTimeout(this.tempTitleTimer);
+            this.tempTitleTimer = undefined;
+        }
+        if (this.tempTitleOriginal === undefined) {
+            this.tempTitleOriginal = document.title;
+        }
         document.title = tempTitle;
-        setTimeout(() => {
-            if (document.title === tempTitle) {
-                document.title = original;
+        this.tempTitleTimer = setTimeout(() => {
+            if (document.title === tempTitle && this.tempTitleOriginal !== undefined) {
+                document.title = this.tempTitleOriginal;
             }
+            this.tempTitleOriginal = undefined;
+            this.tempTitleTimer = undefined;
         }, durationMs);
     };
 }

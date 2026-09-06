@@ -29,9 +29,20 @@ export declare class DomService implements IDomService {
     useOn: <K extends keyof HTMLElementEventMap>(target: EventTarget | string, event: K, callback: (event: HTMLElementEventMap[K]) => void, options?: boolean | AddEventListenerOptions) => (() => void) | null;
     useCreateElement: <T extends keyof HTMLElementTagNameMap>(tagName: T, options?: ElementCreationOptions) => HTMLElementTagNameMap[T];
     /**
-     * Sets innerHTML on the target element.
-     * WARNING: this is an XSS sink. Only pass trusted HTML. For user-supplied
-     * content, use `useSetText` (textContent) instead, or sanitize with DOMPurify.
+     * Sets `innerHTML` on the target element.
+     *
+     * **XSS risk:** this is an HTML injection sink. Never pass unsanitized
+     * user input. Prefer {@link useSetText} for plain text, or sanitize with
+     * a trusted library (e.g. DOMPurify) before calling this method.
+     *
+     * @example
+     * ```ts
+     * // Safe — trusted static markup
+     * useSetHtml("#banner", "<strong>Hello</strong>");
+     *
+     * // Unsafe — do NOT do this with user content
+     * // useSetHtml("#out", userInput);
+     * ```
      */
     useSetHtml: (target: Element | string, html: string) => void;
     useSetText: (target: Element | string, text: string) => void;

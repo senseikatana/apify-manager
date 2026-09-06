@@ -237,8 +237,7 @@ export class FetchApiManager implements IFetchApiManager {
 	): Promise<FetchResult<T>> =>
 		this.useFetch<T>(apiName, endpointName, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: body !== undefined ? JSON.stringify(body) : undefined,
+			...this.SERIALIZE_BODY(body),
 			urlOptions,
 		});
 
@@ -250,8 +249,19 @@ export class FetchApiManager implements IFetchApiManager {
 	): Promise<FetchResult<T>> =>
 		this.useFetch<T>(apiName, endpointName, {
 			method: "PUT",
-			headers: { "Content-Type": "application/json" },
-			body: body !== undefined ? JSON.stringify(body) : undefined,
+			...this.SERIALIZE_BODY(body),
+			urlOptions,
+		});
+
+	public usePatch = async <T = unknown>(
+		apiName: string,
+		endpointName: string,
+		body?: unknown,
+		urlOptions?: UrlOptions,
+	): Promise<FetchResult<T>> =>
+		this.useFetch<T>(apiName, endpointName, {
+			method: "PATCH",
+			...this.SERIALIZE_BODY(body),
 			urlOptions,
 		});
 
@@ -264,6 +274,33 @@ export class FetchApiManager implements IFetchApiManager {
 			method: "DELETE",
 			urlOptions,
 		});
+
+	/**
+	 * Serializes a request body: leaves FormData / Blob / URLSearchParams /
+	 * ArrayBuffer / TypedArray / ReadableStream untouched (no forced JSON
+	 * Content-Type so the runtime can set the multipart boundary).
+	 */
+	private SERIALIZE_BODY = (body: unknown): { body?: BodyInit; headers?: HeadersInit } => {
+		if (body === undefined) return {};
+
+		const isRawBody =
+			(typeof FormData !== "undefined" && body instanceof FormData) ||
+			(typeof Blob !== "undefined" && body instanceof Blob) ||
+			(typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams) ||
+			(typeof ArrayBuffer !== "undefined" && body instanceof ArrayBuffer) ||
+			ArrayBuffer.isView(body) ||
+			(typeof ReadableStream !== "undefined" && body instanceof ReadableStream) ||
+			typeof body === "string";
+
+		if (isRawBody) {
+			return { body: body as BodyInit };
+		}
+
+		return {
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		};
+	};
 }
 
 const http = FetchApiManager.getInstance();
@@ -334,11 +371,7 @@ export function useBuildApiUrl(
 /**
  * @deprecated Prefer {@link useBuildApiUrl}.
  */
-export function useBuildUrl(
-	apiName: string,
-	endpointName: string,
-	options?: UrlOptions,
-): string {
+export function useBuildUrl(apiName: string, endpointName: string, options?: UrlOptions): string {
 	return http.useBuildUrl(apiName, endpointName, options);
 }
 
@@ -422,6 +455,16 @@ export function usePut<T = unknown>(
 	urlOptions?: UrlOptions,
 ): Promise<FetchResult<T>> {
 	return http.usePut<T>(apiName, endpointName, body, urlOptions);
+}
+
+/** PATCH helper over a registered API endpoint. */
+export function usePatch<T = unknown>(
+	apiName: string,
+	endpointName: string,
+	body?: unknown,
+	urlOptions?: UrlOptions,
+): Promise<FetchResult<T>> {
+	return http.usePatch<T>(apiName, endpointName, body, urlOptions);
 }
 
 /** DELETE helper over a registered API endpoint. */

@@ -8,11 +8,7 @@ import {
 	useCreateMemo,
 	useCreateSignal,
 } from "@/core/services/reactive.service";
-import {
-	useDebounceImmediate,
-	useRace,
-	useSetTimeout,
-} from "@/core/services/timing.service";
+import { useDebounceImmediate, useRace, useSetTimeout } from "@/core/services/timing.service";
 import { useDeepMerge } from "@/core/services/utils.service";
 import { useRunStorageScope, useSetStorage } from "@/infrastructure/storage/storage.service";
 import {
@@ -32,6 +28,14 @@ describe("GeometryUtils", () => {
 
 	it("appends a unit when provided", () => {
 		expect(GeometryUtils.perimeter.useCircle(3, { unit: "cm" })).toBe("18.85 cm");
+	});
+
+	it("returns zero for a degenerate ellipse perimeter", () => {
+		expect(GeometryUtils.perimeter.useEllipse(0, 0)).toBe("0.00");
+	});
+
+	it("matches circle perimeter when ellipse axes are equal", () => {
+		expect(GeometryUtils.perimeter.useEllipse(3, 3)).toBe(GeometryUtils.perimeter.useCircle(3));
 	});
 });
 
@@ -104,6 +108,31 @@ describe("ConverterService", () => {
 		expect(useToMiles(1.60934, "en", 5)).toBe("1.00000");
 		expect(Number.parseFloat(useToMiles(10, "en", 2))).toBeCloseTo(6.21, 1);
 	});
+
+	it("round-trips miles ↔ kilometers with a shared constant", async () => {
+		const { useToKilometers } = await import("@/core/services/formatter.service");
+		const miles = Number.parseFloat(useToMiles(16.0934, "en", 5));
+		const backKm = Number.parseFloat(useToKilometers(miles, "en", 5));
+		expect(backKm).toBeCloseTo(16.0934, 4);
+	});
+
+	it("formats currency taxes as percent or fraction", async () => {
+		const { useFormatCurrency } = await import("@/core/services/formatter.service");
+		const withPercent = useFormatCurrency({
+			amount: 100,
+			currency: "USD",
+			taxes: 21,
+			locale: "en-US",
+		});
+		const withFraction = useFormatCurrency({
+			amount: 100,
+			currency: "USD",
+			taxes: 0.21,
+			locale: "en-US",
+		});
+		expect(withPercent).toBe(withFraction);
+		expect(withPercent).toMatch(/121/);
+	});
 });
 
 describe("TimingService", () => {
@@ -159,6 +188,15 @@ describe("DataUtils", () => {
 		expect(merged.b).toBe(2);
 		expect(Object.hasOwn(merged, "__proto__")).toBe(false);
 		expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
+	});
+
+	it("shallow-omits keys without deep-cloning", async () => {
+		const { useOmit } = await import("@/core/services/utils.service");
+		const fn = () => 1;
+		const source = { a: 1, b: 2, fn };
+		const omitted = useOmit(source, ["b"]);
+		expect(omitted).toEqual({ a: 1, fn });
+		expect(omitted.fn).toBe(fn);
 	});
 });
 

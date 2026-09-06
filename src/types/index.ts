@@ -154,6 +154,10 @@ export type Currency =
 export interface CurrencyFormatOptions {
 	amount: number;
 	currency?: Currency;
+	/**
+	 * Tax rate: percentage when `> 1` (e.g. `21` → 21%), or decimal fraction
+	 * when in `(0, 1]` (e.g. `0.21` → 21%). Prefer a fraction for rates ≤ 1%.
+	 */
 	taxes?: number;
 	locale?: Locale;
 }
@@ -291,6 +295,12 @@ export interface IFetchApiManager {
 		urlOptions?: UrlOptions,
 	): Promise<FetchResult<T>>;
 	usePut<T = unknown>(
+		apiName: string,
+		endpointName: string,
+		body?: unknown,
+		urlOptions?: UrlOptions,
+	): Promise<FetchResult<T>>;
+	usePatch<T = unknown>(
 		apiName: string,
 		endpointName: string,
 		body?: unknown,

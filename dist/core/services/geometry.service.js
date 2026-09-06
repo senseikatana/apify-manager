@@ -1,3 +1,7 @@
+/**
+ * Pure helper: formats a numeric geometry result via `Intl`.
+ * Stateless — input → formatted string only.
+ */
 function formatGeometry(value, options = {}) {
     const { locale = "en", digits = 2, unit } = options;
     const formatted = new Intl.NumberFormat(locale, {
@@ -6,7 +10,9 @@ function formatGeometry(value, options = {}) {
     }).format(value);
     return unit ? `${formatted} ${unit}` : formatted;
 }
-/** Area calculations for geometric shapes. */
+/**
+ * Pure area calculations for geometric shapes (static methods, no instance state).
+ */
 export class GeometryArea {
     constructor() { }
     static useRectangle(width, height, options) {
@@ -34,7 +40,9 @@ export class GeometryArea {
         return formatGeometry(base * height, options);
     }
 }
-/** Perimeter calculations for geometric shapes. */
+/**
+ * Pure perimeter calculations for geometric shapes (static methods, no instance state).
+ */
 export class GeometryPerimeter {
     constructor() { }
     static useRectangle(width, height, options) {
@@ -56,17 +64,24 @@ export class GeometryPerimeter {
         return formatGeometry(side1 + side2 + side3 + side4, options);
     }
     static useEllipse(semiMajor, semiMinor, options) {
-        const a = semiMajor;
-        const b = semiMinor;
-        const h = (a - b) ** 2 / (a + b) ** 2;
-        const perimeter = Math.PI * (a + b) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)));
+        const a = Math.abs(semiMajor);
+        const b = Math.abs(semiMinor);
+        const sum = a + b;
+        if (sum === 0) {
+            return formatGeometry(0, options);
+        }
+        // Ramanujan approximation II — stable when a === b (circle).
+        const h = ((a - b) / sum) ** 2;
+        const perimeter = Math.PI * sum * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)));
         return formatGeometry(perimeter, options);
     }
     static useParallelogram(side1, side2, options) {
         return formatGeometry(2 * (side1 + side2), options);
     }
 }
-/** Volume calculations for 3D geometric shapes. */
+/**
+ * Pure volume calculations for 3D geometric shapes (static methods, no instance state).
+ */
 export class GeometryVolume {
     constructor() { }
     static useCube(side, options) {
@@ -89,8 +104,8 @@ export class GeometryVolume {
     }
 }
 /**
- * Consolidated geometry utilities namespace.
- * Groups area, perimeter and volume calculations.
+ * Consolidated pure geometry utilities namespace.
+ * Groups area, perimeter and volume calculations (no shared mutable state).
  */
 export const GeometryUtils = {
     area: GeometryArea,

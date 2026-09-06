@@ -131,7 +131,7 @@ export default class ReactiveService {
     useCreateDebouncedSignal = (initialValue, delayMs = 300) => {
         const [get, set] = this.useCreateSignal(initialValue);
         let timeoutId;
-        const debouncedSet = (nextValue) => {
+        const debouncedSet = ((nextValue) => {
             if (timeoutId !== undefined) {
                 clearTimeout(timeoutId);
             }
@@ -139,11 +139,18 @@ export default class ReactiveService {
                 set(nextValue);
                 timeoutId = undefined;
             }, delayMs);
+        });
+        debouncedSet.useCancel = () => {
+            if (timeoutId !== undefined) {
+                clearTimeout(timeoutId);
+                timeoutId = undefined;
+            }
         };
         return [get, debouncedSet];
     };
     useCreateBatch = () => {
         return (callback) => {
+            const wasBatching = this.isBatching;
             this.isBatching = true;
             try {
                 callback();
@@ -152,11 +159,13 @@ export default class ReactiveService {
                 useLog("error", "[createBatch] Batch block error:", error);
             }
             finally {
-                this.isBatching = false;
-                const queue = Array.from(this.batchQueue);
-                this.batchQueue.clear();
-                for (const notify of queue) {
-                    notify();
+                if (!wasBatching) {
+                    this.isBatching = false;
+                    const queue = Array.from(this.batchQueue);
+                    this.batchQueue.clear();
+                    for (const notify of queue) {
+                        notify();
+                    }
                 }
             }
         };

@@ -1,5 +1,9 @@
 import { useAddClass, useGetRoot, useOn, useRemoveClass, useSetAttribute, } from "../dom/dom.service.js";
 import { useGetStorage, useRemoveStorage, useSetStorage } from "../storage/storage.service.js";
+const VALID_THEME_MODES = ["light", "dark", "system"];
+function isThemeMode(value) {
+    return typeof value === "string" && VALID_THEME_MODES.includes(value);
+}
 /**
  * Theme facade (Singleton) over the DOM and Storage, with a media-query listener.
  */
@@ -30,14 +34,15 @@ export class ThemeService {
         this.target = options.target ?? useGetRoot();
         this.onChange = options.onChange;
         const stored = useGetStorage(this.storageKey);
-        this.mode = stored ?? options.defaultMode ?? "system";
+        const defaultMode = isThemeMode(options.defaultMode) ? options.defaultMode : "system";
+        this.mode = isThemeMode(stored) ? stored : defaultMode;
         this.APPLY_THEME();
         this.SETUP_MEDIA_QUERY_LISTENER();
     };
     useSetThemeMode = (mode) => {
         if (!this.IS_BROWSER())
             return;
-        this.mode = mode ?? "system";
+        this.mode = isThemeMode(mode) ? mode : "system";
         useSetStorage(this.storageKey, this.mode, "localStorage");
         this.APPLY_THEME();
     };

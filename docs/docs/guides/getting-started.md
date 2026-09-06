@@ -582,11 +582,11 @@ const tags = useHeadTags(siteConfig, {
 ## Nuxt Adapter
 
 ```ts
-import { useInit, useGet } from "katanakit-js";
+import { useInitApis, useGetApi } from "katanakit-js";
 import { useUnwrap, useSafeResponse, useEventResponse } from "katanakit-js/adapters/nuxt";
 
 // server/plugins/api.ts
-useInit({
+useInitApis({
   pokeapi: {
     baseUri: "https://pokeapi.co/api/v2",
     endpoints: { pokemonById: "/pokemon/:id/" },
@@ -596,7 +596,7 @@ useInit({
 // server/api/pokemon/[id].ts
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, "id");
-  const result = await useGet("pokeapi", "pokemonById", { params: { id } });
+  const result = await useGetApi("pokeapi", "pokemonById", { params: { id } });
   return useUnwrap(result, `Pokemon ${id}`);
 });
 ```
@@ -606,10 +606,10 @@ export default defineEventHandler(async (event) => {
 ## Vue Adapter
 
 ```ts
-import { useInit } from "katanakit-js";
+import { useInitApis } from "katanakit-js";
 import { useKatanaFetch } from "katanakit-js/adapters/vue";
 
-useInit({
+useInitApis({
   pokeapi: {
     baseUri: "https://pokeapi.co/api/v2",
     endpoints: { pokemonById: "/pokemon/:id/" },

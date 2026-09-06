@@ -108,4 +108,46 @@ describe("FetchApiManager", () => {
 
 		vi.unstubAllGlobals();
 	});
+
+	it("posts FormData without forcing JSON Content-Type", async () => {
+		const { usePost } = await import("@/core/services/http.service");
+		useInitApis({ upload: { baseUri: "https://example.com", endpoints: { file: "/upload" } } });
+
+		const fetchMock = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ ok: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		const form = new FormData();
+		form.append("file", "hello");
+		await usePost("upload", "file", form);
+
+		expect(fetchMock).toHaveBeenCalledOnce();
+		const init = fetchMock.mock.calls[0][1] as RequestInit;
+		expect(init.body).toBe(form);
+		expect(init.headers).toBeUndefined();
+	});
+
+	it("patches JSON bodies with application/json", async () => {
+		const { usePatch } = await import("@/core/services/http.service");
+		useInitApis({ api: { baseUri: "https://example.com", endpoints: { item: "/item" } } });
+
+		const fetchMock = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ ok: true }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+
+		await usePatch("api", "item", { name: "x" });
+
+		const init = fetchMock.mock.calls[0][1] as RequestInit;
+		expect(init.method).toBe("PATCH");
+		expect(init.body).toBe(JSON.stringify({ name: "x" }));
+		expect(init.headers).toEqual({ "Content-Type": "application/json" });
+	});
 });

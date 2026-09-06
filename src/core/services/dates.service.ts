@@ -1,9 +1,14 @@
 import { Temporal } from "@js-temporal/polyfill";
 
 import type { DatesServiceTypes, Locale, TemporalInput } from "../../types/index.js";
+import { useLog } from "./logger.service.js";
 
 /**
  * Facade + Adapter + Singleton over the Temporal polyfill.
+ *
+ * Most methods are pure transforms of their date inputs. Exceptions:
+ * {@link DatesService.useNow} / {@link DatesService.useNowDateTime} / default
+ * args on month helpers read the system clock (impure).
  */
 export class DatesService implements DatesServiceTypes {
 	private static instance: DatesService;
@@ -117,3 +122,5 @@ export const {
 	useFirstDayOfMonth,
 	useLastDayOfMonth,
 }: DatesService = DatesService.getInstance();
+
+useLog("log", useNowDateTime());

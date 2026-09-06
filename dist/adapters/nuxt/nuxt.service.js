@@ -1,6 +1,23 @@
+import { createRequire } from "node:module";
+let cachedCreateError;
+function tryLoadH3CreateError() {
+    if (cachedCreateError !== undefined)
+        return cachedCreateError;
+    try {
+        const require = createRequire(import.meta.url);
+        const h3 = require("h3");
+        cachedCreateError = typeof h3.createError === "function" ? h3.createError : null;
+    }
+    catch {
+        cachedCreateError = null;
+    }
+    return cachedCreateError;
+}
 /**
  * Unwraps a KatanaKit Safe Result, throwing an H3-compatible error on failure.
  * Returns the data directly on success.
+ *
+ * Prefers `h3.createError` when available so Nuxt/H3 status codes work correctly.
  *
  * @param result - The Safe Result from `useFetch`, `useGet`, `usePost`, etc.
  * @param context - Optional context prefix for the error message.
@@ -10,12 +27,12 @@
  * @example
  * ```ts
  * // server/api/pokemon/[id].ts
- * import { useGet } from "katanakit-js";
+ * import { useGetApi } from "katanakit-js";
  * import { useUnwrap } from "katanakit-js/adapters/nuxt";
  *
  * export default defineEventHandler(async (event) => {
  *   const id = getRouterParam(event, "id");
- *   const result = await useGet("pokeapi", "pokemonById", { params: { id } });
+ *   const result = await useGetApi("pokeapi", "pokemonById", { params: { id } });
  *   return useUnwrap(result, `Pokemon ${id}`);
  * });
  * ```
@@ -26,8 +43,6 @@ export function useUnwrap(result, context) {
     }
     const message = context ? `${context}: ${result.error.message}` : result.error.message;
     const statusCode = result.error.status || 500;
-    // Dynamic import to avoid hard dependency on h3.
-    // Consumers must have h3 installed (it comes with Nuxt).
     throw createH3Error(statusCode, message);
 }
 /**
@@ -41,11 +56,11 @@ export function useUnwrap(result, context) {
  * @example
  * ```ts
  * // server/api/users.ts
- * import { useGet } from "katanakit-js";
+ * import { useGetApi } from "katanakit-js";
  * import { useSafeResponse } from "katanakit-js/adapters/nuxt";
  *
  * export default defineEventHandler(async () => {
- *   const result = await useGet("api", "users");
+ *   const result = await useGetApi("api", "users");
  *   return useSafeResponse(result);
  * });
  * ```
@@ -74,11 +89,11 @@ export function useSafeResponse(result) {
  * @example
  * ```ts
  * // server/api/products.ts
- * import { useFetch } from "katanakit-js";
+ * import { useFetchApi } from "katanakit-js";
  * import { useEventResponse } from "katanakit-js/adapters/nuxt";
  *
  * export default defineEventHandler(async (event) => {
- *   const result = await useFetch("shop", "products");
+ *   const result = await useFetchApi("shop", "products");
  *   return useEventResponse(event, result);
  * });
  * ```
@@ -94,11 +109,20 @@ export function useEventResponse(event, result) {
         status: result.error.status,
     };
 }
-// Internal helper: creates an error that looks like an H3 error.
-// We don't import h3 directly to avoid a hard peer dependency.
+/**
+ * Creates an error that H3/Nuxt recognize (statusCode / statusMessage).
+ * Uses `h3.createError` when the peer is installed; otherwise brands a plain Error.
+ */
 function createH3Error(statusCode, message) {
+    const createError = tryLoadH3CreateError();
+    if (createError) {
+        return createError({ statusCode, statusMessage: message, message });
+    }
     const error = new Error(message);
     error.statusCode = statusCode;
+    error.status = statusCode;
+    error.statusMessage = message;
+    error.name = "H3Error";
     return error;
 }
 //# sourceMappingURL=nuxt.service.js.map

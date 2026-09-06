@@ -73,12 +73,12 @@ export function useToFahrenheit(celsius: number, locale: Locale = "en", digits =
 	return useFormatNumber(celsius * 1.8 + 32, locale, digits);
 }
 
-/** Pure: miles → kilometers (formatted). Uses {@link KM_PER_MILE}. */
+/** Pure: miles → kilometers (formatted). Round-trips with `useToMiles`. */
 export function useToKilometers(miles: number, locale: Locale = "en", digits = 2): string {
 	return useFormatNumber(miles * KM_PER_MILE, locale, digits);
 }
 
-/** Pure: kilometers → miles (formatted). Uses {@link KM_PER_MILE}. */
+/** Pure: kilometers → miles (formatted). Round-trips with `useToKilometers`. */
 export function useToMiles(km: number, locale: Locale = "en", digits = 2): string {
 	return useFormatNumber(km / KM_PER_MILE, locale, digits);
 }

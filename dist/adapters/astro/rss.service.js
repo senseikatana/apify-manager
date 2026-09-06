@@ -10,6 +10,20 @@ function escapeXml(text) {
         .replace(/'/g, "&apos;");
 }
 /**
+ * Prevents CDATA section breakout (`]]>` ends a CDATA block early).
+ */
+function sanitizeCdata(content) {
+    return content.replace(/]]>/g, "]]]]><![CDATA[>");
+}
+/**
+ * Sanitizes raw XML fragments injected via `customData`.
+ * Strips CDATA terminators so untrusted strings cannot break the feed.
+ * Callers must only pass trusted markup for RSS extensions.
+ */
+function sanitizeCustomXml(fragment) {
+    return fragment.replace(/]]>/g, "]]&gt;");
+}
+/**
  * Formats a date as RFC-822 (required by RSS 2.0).
  */
 function toRfc822(date) {
@@ -36,7 +50,7 @@ function buildRssXml(config) {
       <title>${escapeXml(item.title)}</title>
       <link>${escapeXml(link)}</link>
       <guid isPermaLink="true">${escapeXml(link)}</guid>
-      <pubDate>${toRfc822(item.pubDate)}</pubDate>${item.description ? `\n      <description>${escapeXml(item.description)}</description>` : ""}${item.content ? `\n      <content:encoded><![CDATA[${item.content}]]></content:encoded>` : ""}${item.author ? `\n      <author>${escapeXml(item.author)}</author>` : ""}${categories ? `\n${categories}` : ""}${item.customData ? `\n      ${item.customData}` : ""}
+      <pubDate>${toRfc822(item.pubDate)}</pubDate>${item.description ? `\n      <description>${escapeXml(item.description)}</description>` : ""}${item.content ? `\n      <content:encoded><![CDATA[${sanitizeCdata(item.content)}]]></content:encoded>` : ""}${item.author ? `\n      <author>${escapeXml(item.author)}</author>` : ""}${categories ? `\n${categories}` : ""}${item.customData ? `\n      ${sanitizeCustomXml(item.customData)}` : ""}
     </item>`;
     })
         .join("\n");
@@ -49,7 +63,7 @@ ${xslProcessing}<rss version="2.0"
     <link>${escapeXml(siteUrl)}</link>
     <description>${escapeXml(description)}</description>
     <language>${escapeXml(language)}</language>
-    <atom:link href="${escapeXml(siteUrl)}${config.xmlPath ?? "/rss.xml"}" rel="self" type="application/rss+xml" />${lastBuildDate ? `\n    <lastBuildDate>${toRfc822(new Date())}</lastBuildDate>` : ""}${customData ? `\n    ${customData}` : ""}
+    <atom:link href="${escapeXml(siteUrl)}${config.xmlPath ?? "/rss.xml"}" rel="self" type="application/rss+xml" />${lastBuildDate ? `\n    <lastBuildDate>${toRfc822(new Date())}</lastBuildDate>` : ""}${customData ? `\n    ${sanitizeCustomXml(customData)}` : ""}
 ${itemsXml}
   </channel>
 </rss>`;

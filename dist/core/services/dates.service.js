@@ -1,6 +1,11 @@
 import { Temporal } from "@js-temporal/polyfill";
+import { useLog } from "./logger.service.js";
 /**
  * Facade + Adapter + Singleton over the Temporal polyfill.
+ *
+ * Most methods are pure transforms of their date inputs. Exceptions:
+ * {@link DatesService.useNow} / {@link DatesService.useNowDateTime} / default
+ * args on month helpers read the system clock (impure).
  */
 export class DatesService {
     static instance;
@@ -61,4 +66,5 @@ export class DatesService {
 }
 // Singleton instance and destructured exports.
 export const { useDiff, useFormat, useNow, useNowDateTime, useAddDays, useSubtractDays, useIsEqual, useIsBefore, useIsAfter, useFirstDayOfMonth, useLastDayOfMonth, } = DatesService.getInstance();
+useLog("log", useNowDateTime());
 //# sourceMappingURL=dates.service.js.map

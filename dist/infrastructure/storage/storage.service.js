@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 /**
  * Base strategy handling safe JSON serialization over a Web Storage backend.
  */
@@ -12,22 +13,43 @@ class WebStorageStrategy {
             return raw ? JSON.parse(raw) : null;
         }
         catch {
-            return this.storage.getItem(key);
+            try {
+                return this.storage.getItem(key);
+            }
+            catch {
+                return null;
+            }
         }
     }
     useSetItem(key, value) {
-        const serialized = typeof value === "string" ? value : JSON.stringify(value);
-        this.storage.setItem(key, serialized);
+        try {
+            const serialized = typeof value === "string" ? value : JSON.stringify(value);
+            this.storage.setItem(key, serialized);
+        }
+        catch {
+            // Quota exceeded, private mode, or unavailable storage — ignore.
+        }
     }
     useRemoveItem(key) {
-        this.storage.removeItem(key);
+        try {
+            this.storage.removeItem(key);
+        }
+        catch {
+            // Ignore unavailable storage.
+        }
     }
     useClear() {
-        this.storage.clear();
+        try {
+            this.storage.clear();
+        }
+        catch {
+            // Ignore unavailable storage.
+        }
     }
 }
 /**
- * In-memory Web Storage implementation used as an SSR fallback.
+ * In-memory Web Storage implementation used as an SSR / private-mode fallback.
+ * Each instance owns its own Map — never share one across requests.
  */
 class MemoryStorage {
     store = new Map();
@@ -54,33 +76,90 @@ class MemoryStorage {
  * Concrete strategy backed by `window.localStorage`.
  */
 export class LocalStorageStrategy extends WebStorageStrategy {
-    constructor() {
-        super(window.localStorage);
+    constructor(storage = window.localStorage) {
+        super(storage);
     }
 }
 /**
  * Concrete strategy backed by `window.sessionStorage`.
  */
 export class SessionStorageStrategy extends WebStorageStrategy {
-    constructor() {
-        super(window.sessionStorage);
+    constructor(storage = window.sessionStorage) {
+        super(storage);
     }
 }
 /**
- * Concrete strategy backed by an in-memory store (SSR fallback).
+ * Concrete strategy backed by an in-memory store (SSR / private-mode fallback).
  */
 export class MemoryStorageStrategy extends WebStorageStrategy {
     constructor() {
         super(new MemoryStorage());
     }
 }
+/** Request-scoped storage strategies for SSR (avoids cross-request leaks). */
+const ssrStorageAls = new AsyncLocalStorage();
+function createMemoryStrategies() {
+    return {
+        localStorage: new MemoryStorageStrategy(),
+        sessionStorage: new MemoryStorageStrategy(),
+    };
+}
+function tryCreateBrowserStrategies() {
+    const local = tryCreateWebStorage("localStorage");
+    const session = tryCreateWebStorage("sessionStorage");
+    return {
+        localStorage: local ?? new MemoryStorageStrategy(),
+        sessionStorage: session ?? new MemoryStorageStrategy(),
+    };
+}
+/**
+ * Probes Web Storage availability (Safari private mode throws on setItem).
+ */
+function tryCreateWebStorage(kind) {
+    try {
+        const storage = window[kind];
+        const probeKey = "__kk_storage_probe__";
+        storage.setItem(probeKey, "1");
+        storage.removeItem(probeKey);
+        return kind === "localStorage"
+            ? new LocalStorageStrategy(storage)
+            : new SessionStorageStrategy(storage);
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Runs `fn` with request-isolated in-memory storage (SSR).
+ * Use this around a request handler so `useSetStorage` / `useGetStorage`
+ * share state within the request but not across requests.
+ *
+ * @example
+ * ```ts
+ * import { useRunStorageScope, useSetStorage, useGetStorage } from "katanakit-js";
+ *
+ * export default defineEventHandler((event) => {
+ *   return useRunStorageScope(() => {
+ *     useSetStorage("req-id", event.context.id);
+ *     return useGetStorage("req-id");
+ *   });
+ * });
+ * ```
+ */
+export function useRunStorageScope(fn) {
+    return ssrStorageAls.run(createMemoryStrategies(), fn);
+}
 /**
  * Storage facade (Singleton + Strategy). Lazily picks browser storage or an
  * in-memory fallback so importing this module never crashes in SSR (Node/Bun).
+ *
+ * In SSR, strategies are **not** cached on the singleton (that would leak data
+ * across requests). Prefer {@link useRunStorageScope} for request-scoped
+ * persistence; without a scope, each call uses a fresh ephemeral store.
  */
 export default class StorageService {
     static instance;
-    strategies = null;
+    browserStrategies = null;
     constructor() { }
     static getInstance() {
         if (!StorageService.instance) {
@@ -89,14 +168,19 @@ export default class StorageService {
         return StorageService.instance;
     }
     getStrategies() {
-        if (!this.strategies) {
-            const hasWindow = typeof window !== "undefined";
-            this.strategies = {
-                localStorage: hasWindow ? new LocalStorageStrategy() : new MemoryStorageStrategy(),
-                sessionStorage: hasWindow ? new SessionStorageStrategy() : new MemoryStorageStrategy(),
-            };
+        const hasWindow = typeof window !== "undefined";
+        if (hasWindow) {
+            if (!this.browserStrategies) {
+                this.browserStrategies = tryCreateBrowserStrategies();
+            }
+            return this.browserStrategies;
         }
-        return this.strategies;
+        // SSR: prefer ALS-scoped strategies (isolated per request).
+        const scoped = ssrStorageAls.getStore();
+        if (scoped)
+            return scoped;
+        // No scope — ephemeral store (no cross-request leak, no cross-call persistence).
+        return createMemoryStrategies();
     }
     useGetStorage = (key, target = "localStorage") => this.getStrategies()[target].useGetItem(key);
     useSetStorage = (key, value, target = "localStorage") => this.getStrategies()[target].useSetItem(key, value);

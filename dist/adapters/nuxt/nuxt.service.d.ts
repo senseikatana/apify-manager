@@ -3,6 +3,8 @@ import type { FetchResult } from "../../types/index.js";
  * Unwraps a KatanaKit Safe Result, throwing an H3-compatible error on failure.
  * Returns the data directly on success.
  *
+ * Prefers `h3.createError` when available so Nuxt/H3 status codes work correctly.
+ *
  * @param result - The Safe Result from `useFetch`, `useGet`, `usePost`, etc.
  * @param context - Optional context prefix for the error message.
  * @returns The data from the result.
@@ -11,12 +13,12 @@ import type { FetchResult } from "../../types/index.js";
  * @example
  * ```ts
  * // server/api/pokemon/[id].ts
- * import { useGet } from "katanakit-js";
+ * import { useGetApi } from "katanakit-js";
  * import { useUnwrap } from "katanakit-js/adapters/nuxt";
  *
  * export default defineEventHandler(async (event) => {
  *   const id = getRouterParam(event, "id");
- *   const result = await useGet("pokeapi", "pokemonById", { params: { id } });
+ *   const result = await useGetApi("pokeapi", "pokemonById", { params: { id } });
  *   return useUnwrap(result, `Pokemon ${id}`);
  * });
  * ```
@@ -33,11 +35,11 @@ export declare function useUnwrap<T>(result: FetchResult<T>, context?: string): 
  * @example
  * ```ts
  * // server/api/users.ts
- * import { useGet } from "katanakit-js";
+ * import { useGetApi } from "katanakit-js";
  * import { useSafeResponse } from "katanakit-js/adapters/nuxt";
  *
  * export default defineEventHandler(async () => {
- *   const result = await useGet("api", "users");
+ *   const result = await useGetApi("api", "users");
  *   return useSafeResponse(result);
  * });
  * ```
@@ -61,11 +63,11 @@ export declare function useSafeResponse<T>(result: FetchResult<T>): {
  * @example
  * ```ts
  * // server/api/products.ts
- * import { useFetch } from "katanakit-js";
+ * import { useFetchApi } from "katanakit-js";
  * import { useEventResponse } from "katanakit-js/adapters/nuxt";
  *
  * export default defineEventHandler(async (event) => {
- *   const result = await useFetch("shop", "products");
+ *   const result = await useFetchApi("shop", "products");
  *   return useEventResponse(event, result);
  * });
  * ```

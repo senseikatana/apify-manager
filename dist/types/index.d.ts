@@ -71,6 +71,10 @@ export interface WorkerPoolEntry<TInput = unknown, TOutput = unknown> {
     worker: Worker;
     workerUrl: string;
     func: WorkerFunc<TInput, TOutput>;
+    pending: Map<string, {
+        reject: (reason: Error) => void;
+        cleanup: () => void;
+    }>;
 }
 export type StorageTarget = "localStorage" | "sessionStorage";
 /** Strategy contract: homogeneous storage without `any`. */
@@ -85,6 +89,10 @@ export type Currency = "EUR" | "USD" | "GBP" | "JPY" | "CAD" | "MXN" | "CHF" | "
 export interface CurrencyFormatOptions {
     amount: number;
     currency?: Currency;
+    /**
+     * Tax rate: percentage when `> 1` (e.g. `21` → 21%), or decimal fraction
+     * when in `(0, 1]` (e.g. `0.21` → 21%). Prefer a fraction for rates ≤ 1%.
+     */
     taxes?: number;
     locale?: Locale;
 }
@@ -158,12 +166,18 @@ export type FetchResult<T = unknown> = {
 /** Contract of the fetch facade. */
 export interface IFetchApiManager {
     useInit(apis: ApisConfig): void;
+    useInitApis(apis: ApisConfig): void;
     useGetApis(): ApisConfig;
+    useGetApisConfig(): ApisConfig;
     useBuildUrl(apiName: string, endpointName: string, options?: UrlOptions): string;
+    useBuildApiUrl(apiName: string, endpointName: string, options?: UrlOptions): string;
     useFetch<T = unknown>(apiName: string, endpointName: string, options?: FetchOptions): Promise<FetchResult<T>>;
+    useFetchApi<T = unknown>(apiName: string, endpointName: string, options?: FetchOptions): Promise<FetchResult<T>>;
     useGet<T = unknown>(apiName: string, endpointName: string, urlOptions?: UrlOptions): Promise<FetchResult<T>>;
+    useGetApi<T = unknown>(apiName: string, endpointName: string, urlOptions?: UrlOptions): Promise<FetchResult<T>>;
     usePost<T = unknown>(apiName: string, endpointName: string, body?: unknown, urlOptions?: UrlOptions): Promise<FetchResult<T>>;
     usePut<T = unknown>(apiName: string, endpointName: string, body?: unknown, urlOptions?: UrlOptions): Promise<FetchResult<T>>;
+    usePatch<T = unknown>(apiName: string, endpointName: string, body?: unknown, urlOptions?: UrlOptions): Promise<FetchResult<T>>;
     useDelete<T = unknown>(apiName: string, endpointName: string, urlOptions?: UrlOptions): Promise<FetchResult<T>>;
 }
 /** Serialized shape returned by {@link AppError.useToJson}. */
@@ -204,6 +218,8 @@ export interface IConverterService {
 }
 /** Contract for a crypto strategy. */
 export interface ICryptoStrategy {
+    useHash(plainText: string, salt?: string): Promise<string>;
+    /** @deprecated Use {@link useHash}. */
     useEncrypt(plainText: string, salt?: string): Promise<string>;
 }
 /** Contract for a UUID strategy. */
@@ -235,7 +251,9 @@ export interface IReactiveService {
     useCreateMemo<T>(computation: () => T, signals: Subscribable<unknown>[]): SignalGetter<T>;
     useCreateToggle(initialValue?: boolean): [SignalGetter<boolean>, ToggleSignalSetter];
     useCreateStorageSignal<T>(key: string, fallbackValue: T, target?: StorageTarget): [SignalGetter<T>, SignalSetter<T>];
-    useCreateDebouncedSignal<T>(initialValue: T, delayMs?: number): [SignalGetter<T>, SignalSetter<T>];
+    useCreateDebouncedSignal<T>(initialValue: T, delayMs?: number): [SignalGetter<T>, SignalSetter<T> & {
+        useCancel: () => void;
+    }];
     useCreateBatch(): (callback: () => void) => void;
 }
 /** Control object returned by timeout operations. */

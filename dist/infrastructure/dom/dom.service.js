@@ -73,6 +73,14 @@ export class DomService {
         if (/^on/i.test(attr)) {
             throw new Error(`[DomService] Attribute "${attr}" is not allowed. Use useOn() for events.`);
         }
+        const normalizedAttr = attr.toLowerCase();
+        const urlLikeAttrs = new Set(["href", "src", "xlink:href", "action", "formaction"]);
+        if (urlLikeAttrs.has(normalizedAttr) && /^\s*javascript:/i.test(value)) {
+            throw new Error(`[DomService] javascript: URLs are not allowed in attribute "${attr}".`);
+        }
+        if (normalizedAttr === "srcdoc" && /(?:javascript:|<script\b)/i.test(value)) {
+            throw new Error(`[DomService] Potentially unsafe srcdoc value is not allowed.`);
+        }
         this.RESOLVE(target)?.setAttribute(attr, value);
     };
     useRemoveAttribute = (target, attr) => {
@@ -103,9 +111,20 @@ export class DomService {
         return document.createElement(tagName, options);
     };
     /**
-     * Sets innerHTML on the target element.
-     * WARNING: this is an XSS sink. Only pass trusted HTML. For user-supplied
-     * content, use `useSetText` (textContent) instead, or sanitize with DOMPurify.
+     * Sets `innerHTML` on the target element.
+     *
+     * **XSS risk:** this is an HTML injection sink. Never pass unsanitized
+     * user input. Prefer {@link useSetText} for plain text, or sanitize with
+     * a trusted library (e.g. DOMPurify) before calling this method.
+     *
+     * @example
+     * ```ts
+     * // Safe — trusted static markup
+     * useSetHtml("#banner", "<strong>Hello</strong>");
+     *
+     * // Unsafe — do NOT do this with user content
+     * // useSetHtml("#out", userInput);
+     * ```
      */
     useSetHtml = (target, html) => {
         const el = this.RESOLVE(target);

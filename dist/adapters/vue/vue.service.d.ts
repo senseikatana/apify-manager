@@ -14,14 +14,17 @@ export interface KatanaFetchState<T> {
     refetch: () => Promise<void>;
 }
 /**
- * Vue 3 composable that wraps KatanaKit's `useGet` with the reactivity system.
+ * Vue 3 composable that wraps KatanaKit's HTTP GET with the reactivity system.
  * It bridges the Safe Result pattern to idiomatic Vue state (`data`, `error`,
  * `loading`) and never throws on HTTP errors.
+ *
+ * Stale responses are ignored via a request version counter and AbortController.
+ * In-flight requests are aborted on unmount when `onUnmounted` is available.
  *
  * When `options` is a Vue `Ref`, the request re-runs automatically whenever the
  * ref changes (deep watch), so URL params or query params can drive refetching.
  *
- * @param apiName - Name of the registered API (see `useInit`).
+ * @param apiName - Name of the registered API (see `useInitApis`).
  * @param endpointName - Name of the endpoint inside that API.
  * @param options - Optional `UrlOptions` (path/query params), plain or reactive.
  * @returns Reactive `{ data, error, loading, refetch }`.

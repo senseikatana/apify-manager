@@ -14,27 +14,49 @@ declare abstract class WebStorageStrategy implements StorageStrategy {
  * Concrete strategy backed by `window.localStorage`.
  */
 export declare class LocalStorageStrategy extends WebStorageStrategy {
-    constructor();
+    constructor(storage?: Storage);
 }
 /**
  * Concrete strategy backed by `window.sessionStorage`.
  */
 export declare class SessionStorageStrategy extends WebStorageStrategy {
-    constructor();
+    constructor(storage?: Storage);
 }
 /**
- * Concrete strategy backed by an in-memory store (SSR fallback).
+ * Concrete strategy backed by an in-memory store (SSR / private-mode fallback).
  */
 export declare class MemoryStorageStrategy extends WebStorageStrategy {
     constructor();
 }
 /**
+ * Runs `fn` with request-isolated in-memory storage (SSR).
+ * Use this around a request handler so `useSetStorage` / `useGetStorage`
+ * share state within the request but not across requests.
+ *
+ * @example
+ * ```ts
+ * import { useRunStorageScope, useSetStorage, useGetStorage } from "katanakit-js";
+ *
+ * export default defineEventHandler((event) => {
+ *   return useRunStorageScope(() => {
+ *     useSetStorage("req-id", event.context.id);
+ *     return useGetStorage("req-id");
+ *   });
+ * });
+ * ```
+ */
+export declare function useRunStorageScope<T>(fn: () => T): T;
+/**
  * Storage facade (Singleton + Strategy). Lazily picks browser storage or an
  * in-memory fallback so importing this module never crashes in SSR (Node/Bun).
+ *
+ * In SSR, strategies are **not** cached on the singleton (that would leak data
+ * across requests). Prefer {@link useRunStorageScope} for request-scoped
+ * persistence; without a scope, each call uses a fresh ephemeral store.
  */
 export default class StorageService {
     private static instance;
-    private strategies;
+    private browserStrategies;
     private constructor();
     static getInstance(): StorageService;
     private getStrategies;

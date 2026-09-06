@@ -36,10 +36,10 @@ export class SensorsUtils {
         }
     }
     async useGetFrontCamera() {
-        return this.useGetMediaStream({ video: { facingMode: "user" }, audio: true });
+        return this.useGetMediaStream({ video: { facingMode: "user" }, audio: false });
     }
     async useGetBackCamera() {
-        return this.useGetMediaStream({ video: { facingMode: "environment" }, audio: true });
+        return this.useGetMediaStream({ video: { facingMode: "environment" }, audio: false });
     }
     async useGetGeolocation(options) {
         if (!this.isBrowser() || !navigator.geolocation)
@@ -74,9 +74,11 @@ export class SensorsUtils {
     async useRequestMotionPermission() {
         if (!this.isBrowser())
             return false;
+        if (typeof DeviceOrientationEvent === "undefined") {
+            return false;
+        }
         const DeviceOrientationEventExtended = DeviceOrientationEvent;
-        if (typeof DeviceOrientationEventExtended !== "undefined" &&
-            typeof DeviceOrientationEventExtended.requestPermission === "function") {
+        if (typeof DeviceOrientationEventExtended.requestPermission === "function") {
             try {
                 const response = await DeviceOrientationEventExtended.requestPermission();
                 return response === "granted";
@@ -89,7 +91,7 @@ export class SensorsUtils {
         return true;
     }
     useOnDeviceOrientation(callback) {
-        if (!this.isBrowser())
+        if (!this.isBrowser() || typeof DeviceOrientationEvent === "undefined")
             return null;
         window.addEventListener("deviceorientation", callback);
         return () => {
