@@ -48,9 +48,9 @@
     "dev": "tsx src/adapters/express/main.ts",
     "check": "biome check ./src && tsc --noEmit && vitest run",
     "fix": "biome check --write ./src && tsc --noEmit && vitest run",
-    "build": "yarn check && tsc -p tsconfig.json",
-    "release": "yarn build && yarn version --new-version",
-    "docs": "yarn --cwd docs"
+    "build": "bun run check && tsc -p tsconfig.json",
+    "release": "bun run build && bunx version",
+    "docs": "bun --cwd docs"
   },
   "repository": {
     "type": "git",

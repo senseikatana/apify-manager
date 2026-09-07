@@ -66,12 +66,8 @@
                             "author": {
                                 "cardinality": "N:1",
                                 "on": {
-                                    "localFields": [
-                                        "authorId"
-                                    ],
-                                    "targetFields": [
-                                        "id"
-                                    ]
+                                    "localFields": ["authorId"],
+                                    "targetFields": ["id"]
                                 },
                                 "to": {
                                     "model": "User",
@@ -153,12 +149,8 @@
                             "posts": {
                                 "cardinality": "1:N",
                                 "on": {
-                                    "localFields": [
-                                        "id"
-                                    ],
-                                    "targetFields": [
-                                        "authorId"
-                                    ]
+                                    "localFields": ["id"],
+                                    "targetFields": ["authorId"]
                                 },
                                 "to": {
                                     "model": "Post",
@@ -245,16 +237,12 @@
                                 {
                                     "onDelete": "cascade",
                                     "source": {
-                                        "columns": [
-                                            "authorId"
-                                        ],
+                                        "columns": ["authorId"],
                                         "namespaceId": "public",
                                         "tableName": "posts"
                                     },
                                     "target": {
-                                        "columns": [
-                                            "id"
-                                        ],
+                                        "columns": ["id"],
                                         "namespaceId": "public",
                                         "tableName": "users"
                                     }
@@ -262,18 +250,14 @@
                             ],
                             "indexes": [
                                 {
-                                    "columns": [
-                                        "authorId"
-                                    ],
+                                    "columns": ["authorId"],
                                     "name": "posts_authorId_idx_e47547ed",
                                     "prefix": "posts_authorId_idx",
                                     "unique": false
                                 }
                             ],
                             "primaryKey": {
-                                "columns": [
-                                    "id"
-                                ]
+                                "columns": ["id"]
                             },
                             "uniques": []
                         },
@@ -321,20 +305,14 @@
                             "foreignKeys": [],
                             "indexes": [],
                             "primaryKey": {
-                                "columns": [
-                                    "id"
-                                ]
+                                "columns": ["id"]
                             },
                             "uniques": [
                                 {
-                                    "columns": [
-                                        "email"
-                                    ]
+                                    "columns": ["email"]
                                 },
                                 {
-                                    "columns": [
-                                        "username"
-                                    ]
+                                    "columns": ["username"]
                                 }
                             ]
                         }
