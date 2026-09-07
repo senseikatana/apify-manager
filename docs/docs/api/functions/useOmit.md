@@ -2,7 +2,7 @@
 
 > **useOmit**&lt;`T`, `K`&gt;(`obj`, `keys`): `Omit`&lt;`T`, `K`&gt;
 
-Defined in: [src/core/services/utils.service.ts:89](https://github.com/senseikatana/katanakit-js/blob/3163abef08c959a49d8e5fdfc946044012dab465/src/core/services/utils.service.ts#L89)
+Defined in: [src/core/services/utils.service.ts:89](https://github.com/senseikatana/katanakit-js/blob/7327444cca55df05754ea3a25325f2d544b9811c/src/core/services/utils.service.ts#L89)
 
 Pure: shallow omit listed keys into a new object.
 (Shallow on purpose — avoids `structuredClone` failures on non-cloneable values.)

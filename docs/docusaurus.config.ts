@@ -94,6 +94,10 @@ const config: Config = {
               label: 'API Reference',
               to: '/docs/api',
             },
+            {
+              label: 'Changelog',
+              to: '/docs/changelog',
+            },
           ],
         },
         {
