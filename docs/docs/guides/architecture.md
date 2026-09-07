@@ -43,6 +43,7 @@ world (browser APIs, HTTP, frameworks) and a shared kernel of contracts.
    └──────────────────────────────────────────────────┘
    │
    ├── config/   siteConfig (typed SiteConfig) + SEO helpers (seo.service.ts)
+   ├── prisma/   Prisma schema, generated contract types, db client
 ```
 
 ## Layer-by-layer
@@ -148,6 +149,19 @@ to the default-exported classes (`StorageService`, `ViewportService`,
 Both are re-exported from the main barrel (`import { siteConfig, type
 SiteConfig, useSeoMeta } from "katanakit-js"`) and from
 `katanakit-js/adapters/astro`.
+
+### `prisma/` — database layer (optional)
+
+- `schema.prisma` — the Prisma schema (`User`, `Post` models,
+  Prisma ORM contract-first syntax).
+- `schema.json` / `schema.d.ts` — generated contract artifacts
+  (**do not edit**; regenerate with `prisma contract emit`).
+- `db.ts` — the typed database client built with `@prisma/orm-postgres` from
+  the contract and `DATABASE_URL` (read from `dotenv`).
+- `prisma.config.ts` (repo root) — Prisma CLI/ORM configuration.
+
+This layer is optional: `@prisma/orm-postgres` is an optional peer dependency
+and the client is not exported from the main barrel.
 
 ## Package layout and ESM
 
