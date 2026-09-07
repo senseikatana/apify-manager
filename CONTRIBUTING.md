@@ -73,20 +73,18 @@ git checkout dev
 bun install
 ```
 
-Useful scripts (prefer `yarn run <script>` when the name clashes with a Yarn built-in, e.g. `yarn run check`):
+Useful scripts:
 
 | Command | Description |
 | ------- | ----------- |
-| `yarn validate` | Biome + typecheck + tests (no `dist/`) |
-| `yarn build` | `validate` then compile to `dist/` |
-| `yarn test` / `test:watch` | Vitest |
-| `yarn check` / `check:fix` | Biome check / auto-fix |
-| `yarn typecheck` | `tsc --noEmit` |
-| `yarn docs:dev` / `docs:build` / `docs:preview` / `docs:clear` | Docs site (`docs:build` runs `validate` + clear first) |
-| `yarn release:patch` / `:minor` / `:major` | `build` → version bump → publish |
-| `yarn dev` / `start` | Express example server |
+| `yarn check` | Biome + typecheck + tests (gate before build/publish) |
+| `yarn fix` | Same as `check` with Biome auto-fix |
+| `yarn build` | `check` then compile to `dist/` |
+| `yarn release -- <patch\|minor\|major>` | `build` → version bump → publish |
+| `yarn docs -- <dev\|build\|serve>` | Docs site (`build` runs `check` + clear first) |
+| `yarn dev` | Express example server |
 
-`build`, `docs:build`, `prepublishOnly` and `release:*` never compile or publish unless `validate` passes.
+`build` and `release` never compile or publish unless `check` passes.
 
 ## Directory layout
 
@@ -118,8 +116,9 @@ When you change a public API:
 ### Running the docs locally
 
 ```bash
-yarn docs:dev    # starts Astro dev server at localhost:4321
-yarn docs:build  # builds the static site to docs-site/dist/
+yarn docs -- dev    # starts Docusaurus dev server
+yarn docs -- build  # builds the static site (runs check + clear first)
+yarn docs -- serve  # serves the built site locally
 ```
 
 ### How versioning works
@@ -133,12 +132,12 @@ yarn docs:build  # builds the static site to docs-site/dist/
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 and keeps a [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)-style
 `CHANGELOG.md`. The current development version is **2.2.1** (unreleased). Use
-the `release:*` scripts to cut a release:
+the `release` script to cut a release:
 
 ```bash
-yarn release:patch   # build (validate + compile) + bump patch + publish
-yarn release:minor   # same for minor
-yarn release:major   # same for major
+yarn release -- patch   # build (check + compile) + bump patch + publish
+yarn release -- minor   # same for minor
+yarn release -- major   # same for major
 ```
 
 The release workflow on GitHub Actions creates a tag and GitHub release on every
