@@ -14,9 +14,6 @@ and deploy it. In particular:
   with `func.toString()` and executed inside a Web Worker. Only pass functions
   that are part of your own bundle — never functions derived from user input. A
   Web Worker is **not** a security sandbox.
-- **Database (`src/prisma/db.ts`)** reads the `DATABASE_URL` environment
-  variable and throws at import time if it is missing. Never commit `.env`
-  files; use `.env.example` as a template.
 - **HTML sinks (`DomService.useSetHtml`, RSS `content`)** — anything you place
   in `innerHTML`, RSS CDATA or `SeoMeta` is trusted output. Sanitize
   user-supplied content before it reaches these sinks.

@@ -8,7 +8,7 @@
 		"lineWidth": 100
 	},
 	"files": {
-		"includes": ["**", "!**/src/prisma/schema.d.ts", "!**/src/prisma/schema.json"]
+		"includes": ["**"]
 	},
 	"linter": {
 		"enabled": true,

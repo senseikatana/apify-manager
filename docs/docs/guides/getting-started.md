@@ -19,7 +19,7 @@ bun add katanakit-js
 ```
 
 Only `@js-temporal/polyfill` is a runtime dependency. `express`, `cors`,
-`dotenv` and `@prisma/orm-postgres` are optional peer dependencies.
+`dotenv` and `vue` are optional peer dependencies.
 
 ### CDN (ESM in the browser)
 

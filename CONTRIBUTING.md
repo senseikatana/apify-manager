@@ -14,9 +14,8 @@ These rules keep the codebase consistent and maintainable. Please read
    free of browser/runtime I/O. Adapters that own I/O live in
    `src/infrastructure/` (DOM, storage, viewport, sensors, observer, worker,
    theme). Framework-facing adapters live in `src/adapters/` (`astro/`,
-   `express/`, `nuxt/`), site config/SEO in `src/config/` and the Prisma
-   contract layer in `src/prisma/`. Put new capabilities in the layer that
-   matches their responsibility.
+   `express/`, `nuxt/`), site config/SEO in `src/config/`. Put new capabilities
+   in the layer that matches their responsibility.
 2. **Design patterns** — services are Singleton facades and use
    Strategy/Observer/Factory/Facade/Adapter where it makes sense. Preserve the
    pattern when extending a service. `adapters/nuxt` is the one deliberate
@@ -41,7 +40,7 @@ These rules keep the codebase consistent and maintainable. Please read
    lives in `src/types/index.ts`. Services reference these interfaces (`I*`,
    `LogStrategy`, `StorageStrategy`, ...) instead of re-declaring shapes.
 7. **Framework adapters as subpaths** — anything that imports a framework
-   (`express`, `h3`/Nuxt, `@prisma/*`) must not be re-exported from the main
+   (`express`, `h3`/Nuxt, `vue`/`astro`) must not be re-exported from the main
    barrel `src/index.ts`. Expose it through the `exports` map in
    `package.json` (`katanakit-js/adapters/express`, `katanakit-js/adapters/nuxt`)
    so library consumers never pull those dependencies.
@@ -53,9 +52,7 @@ These rules keep the codebase consistent and maintainable. Please read
    are written in English.
 10. **No side effects on import** — importing any public module must never
     trigger network calls, timers, storage writes or DOM mutations. Strategy
-    objects and I/O are created lazily inside methods. The only module that
-    reads the environment is `src/prisma/db.ts`, which is intentionally absent
-    from the public barrel.
+    objects and I/O are created lazily inside methods.
 11. **SSR safety** — browser-only adapters must guard or fall back gracefully
     when `window`/`document`/`navigator` is unavailable (Node/Bun SSR).
 12. **Safe Result for fallible async operations** — prefer returning a
@@ -93,9 +90,6 @@ Useful scripts:
 - `src/infrastructure/` — adapters that own browser/runtime I/O.
 - `src/adapters/` — framework adapters (`astro/`, `express/`, `nuxt/`).
 - `src/config/` — `site.config.ts` + `seo.service.ts`.
-- `src/prisma/` — Prisma schema, generated contract artifacts and the `db`
-  client (`schema.json`/`schema.d.ts` are generated — do not edit; regenerate
-  with `prisma contract emit`).
 - `src/index.ts` — main barrel (public API surface).
 - `tests/` — Vitest unit tests (import from `src/` via the `@/` alias).
 - `examples/` — runnable demos.

@@ -15,7 +15,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - **Renamed the npm package** from `katanakit-dev` to `katanakit-js` (version bumped to 2.2.1). The `exports` map now exposes the root entry plus three framework subpaths: `katanakit-js/adapters/express`, `katanakit-js/adapters/nuxt` and `katanakit-js/adapters/vue`.
-- **Restructured the project** with hexagonal architecture into `types/`, `core/services/`, `infrastructure/` (browser/runtime adapters), `adapters/` (Astro, Express, Nuxt, Vue), `config/` (site config + SEO), and `prisma/`.
+- **Restructured the project** with hexagonal architecture into `types/`, `core/services/`, `infrastructure/` (browser/runtime adapters), `adapters/` (Astro, Express, Nuxt, Vue), and `config/` (site config + SEO).
 - Exposed the public API through barrel files (`src/index.ts` and per-layer `index.ts`).
 - Added Vitest unit tests for the HTTP client, logger, storage, geometry, errors, and reactive services (60 tests across 8 files).
 
@@ -32,7 +32,7 @@ Developed and published as `katanakit-dev`.
 
 ### Added
 
-- **Reorganized the project** with hexagonal architecture into `types/`, `core/services/`, `infrastructure/`, `adapters/`, `config/`, and `prisma/`.
+- **Reorganized the project** with hexagonal architecture into `types/`, `core/services/`, `infrastructure/`, `adapters/`, and `config/`.
 - Exposed the public API through barrel files (`src/index.ts` and per-layer `index.ts`).
 - Added Vitest unit tests for the HTTP client, logger, storage, DOM, and reactive services.
 - Added English documentation (`README.md`, `CONTRIBUTING.md`, `docs/`, `SECURITY.md`).

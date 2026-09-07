@@ -39,6 +39,4 @@ docs/docs/api/
 .devin/
 # Finder (MacOS) folder config
 .DS_Store
-.prisma/
 node_modules/
-dist/

@@ -14,7 +14,7 @@ Legend: `[x]` done · `[ ]` planned.
 ### Architecture and packaging
 
 - [x] Hexagonal reorganization into `types/`, `core/services/`,
-      `infrastructure/`, `adapters/`, `config/` and `prisma/`.
+      `infrastructure/`, `adapters/`, `config/`.
 - [x] Pure ESM: relative imports with explicit `.js` extensions,
       `module: nodenext`, `"type": "module"` and an `exports` map with subpaths
       (`katanakit-js/adapters/express`, `katanakit-js/adapters/nuxt`).
@@ -25,7 +25,7 @@ Legend: `[x]` done · `[ ]` planned.
 - [x] No side effects on import; SSR-safe infrastructure adapters.
 - [x] Removed TypeScript errors, import-time side effects and duplicate types.
 - [x] Dependency restructure: only `@js-temporal/polyfill` as a runtime
-      dependency; `express`, `cors`, `dotenv` and `@prisma/orm-postgres` as
+      dependency; `express`, `cors`, `dotenv` and `vue` as
       optional peer dependencies.
 - [x] Package renamed for publication as `katanakit-js` (previously developed
       as `katanakit-dev`).
@@ -48,8 +48,6 @@ Legend: `[x]` done · `[ ]` planned.
       (`data`, `error`, `loading`, `refetch`).
 - [x] Express reference server (`katanakit-js/adapters/express`) with CORS
       restriction defaults and hardened headers.
-- [x] Prisma integration using the ORM contract pattern
-      (`schema.prisma` + generated contract artifacts + `db.ts`).
 - [x] Worker pool concurrency fixed by correlating tasks with a `taskId` echo.
 - [x] `useEncrypt` generates a random salt when none is provided.
 
@@ -76,7 +74,6 @@ Legend: `[x]` done · `[ ]` planned.
 - [ ] More framework adapters: React hooks (`useApi`, `useSignal`) and Svelte
       stores.
 - [ ] Structured/JSON logger strategy.
-- [ ] Prisma migrations and seed scripts for the bundled schema.
 - [ ] Add Vitest coverage reporting and a CI pipeline (GitHub Actions) running
       `check`, `test` and `build` on the `dev` branch.
 
