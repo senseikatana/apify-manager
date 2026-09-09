@@ -2,7 +2,7 @@
 
 > **UseSeoMetaBase** = [`SeoMetaInput`](SeoMetaInput.md) & `object`
 
-Defined in: [src/config/seo-meta.types.ts:112](https://github.com/senseikatana/katanakit-js/blob/ce5878edd9b1e40839bf178cab1449f3852fd281/src/config/seo-meta.types.ts#L112)
+Defined in: [src/config/seo-meta.types.ts:112](https://github.com/senseikatana/katanakit-js/blob/583f163722c75b0302ed6af94980486c31644409/src/config/seo-meta.types.ts#L112)
 
 Site + HTML + OG fields in one object (before Omit).
 

@@ -2,7 +2,7 @@
 
 > **useToKilos**(`pounds`, `locale?`, `digits?`): `string`
 
-Defined in: [src/core/services/formatter.service.ts:283](https://github.com/senseikatana/katanakit-js/blob/ce5878edd9b1e40839bf178cab1449f3852fd281/src/core/services/formatter.service.ts#L283)
+Defined in: [src/core/services/formatter.service.ts:283](https://github.com/senseikatana/katanakit-js/blob/583f163722c75b0302ed6af94980486c31644409/src/core/services/formatter.service.ts#L283)
 
 Pure: pounds → kilograms (formatted).
 

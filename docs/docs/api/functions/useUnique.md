@@ -2,7 +2,7 @@
 
 > **useUnique**&lt;`T`&gt;(`array`): `T`[]
 
-Defined in: [src/core/services/utils.service.ts:14](https://github.com/senseikatana/katanakit-js/blob/ce5878edd9b1e40839bf178cab1449f3852fd281/src/core/services/utils.service.ts#L14)
+Defined in: [src/core/services/utils.service.ts:14](https://github.com/senseikatana/katanakit-js/blob/583f163722c75b0302ed6af94980486c31644409/src/core/services/utils.service.ts#L14)
 
 Returns a new array with duplicate values removed, preserving first-seen order.
 

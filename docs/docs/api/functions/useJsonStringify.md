@@ -2,7 +2,7 @@
 
 > **useJsonStringify**(`data`): `string`
 
-Defined in: [src/core/services/formatter.service.ts:130](https://github.com/senseikatana/katanakit-js/blob/ce5878edd9b1e40839bf178cab1449f3852fd281/src/core/services/formatter.service.ts#L130)
+Defined in: [src/core/services/formatter.service.ts:130](https://github.com/senseikatana/katanakit-js/blob/583f163722c75b0302ed6af94980486c31644409/src/core/services/formatter.service.ts#L130)
 
 Pure: pretty-print JSON (3-space indent).
 

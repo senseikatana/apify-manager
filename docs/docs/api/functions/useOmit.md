@@ -2,7 +2,7 @@
 
 > **useOmit**&lt;`T`, `K`&gt;(`obj`, `keys`): `Omit`&lt;`T`, `K`&gt;
 
-Defined in: [src/core/services/utils.service.ts:204](https://github.com/senseikatana/katanakit-js/blob/ce5878edd9b1e40839bf178cab1449f3852fd281/src/core/services/utils.service.ts#L204)
+Defined in: [src/core/services/utils.service.ts:204](https://github.com/senseikatana/katanakit-js/blob/583f163722c75b0302ed6af94980486c31644409/src/core/services/utils.service.ts#L204)
 
 Omits the listed keys from an object, returning a shallow copy without
 them. Shallow on purpose to avoid `structuredClone` failures on

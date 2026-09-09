@@ -2,7 +2,7 @@
 
 > **UseSeoMetaOptions**&lt;`OmitKeys`&gt; = `Omit`&lt;[`UseSeoMetaBase`](UseSeoMetaBase.md), `OmitKeys`&gt;
 
-Defined in: [src/config/seo-meta.types.ts:160](https://github.com/senseikatana/katanakit-js/blob/ce5878edd9b1e40839bf178cab1449f3852fd281/src/config/seo-meta.types.ts#L160)
+Defined in: [src/config/seo-meta.types.ts:160](https://github.com/senseikatana/katanakit-js/blob/583f163722c75b0302ed6af94980486c31644409/src/config/seo-meta.types.ts#L160)
 
 Public options for [useSeoMeta](../functions/useSeoMeta.md).
 Only HTML + Open Graph (+ site fields). Omit keys you do not want in the type.
