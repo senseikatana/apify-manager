@@ -33,7 +33,7 @@ export function useAstroPathsFrom(items, options = {}) {
  *
  * @param getCollectionFn - Astro's getCollection function
  * @param collectionName - Name of the collection to fetch
- * @options - Path generation options
+ * @param options - Path generation options
  * @returns Safe result with data or error
  *
  * @example

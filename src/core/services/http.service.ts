@@ -85,7 +85,7 @@ function serializeBody(body: unknown): { body?: BodyInit; headers?: HeadersInit 
  * Registers (merges) API definitions into the client registry.
  * Prefer the clearer alias {@link useInitApis}.
  *
- * @param apis - The API definitions to merge into the registry.
+ * @param apisConfig - The API definitions to merge into the registry.
  *
  * @example
  * ```ts
