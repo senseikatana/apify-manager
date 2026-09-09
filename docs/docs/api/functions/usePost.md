@@ -2,7 +2,7 @@
 
 > **usePost**&lt;`T`&gt;(`apiName`, `endpointName`, `body?`, `urlOptions?`): `Promise`&lt;[`FetchResult`](../type-aliases/FetchResult.md)&lt;`T`&gt;&gt;
 
-Defined in: [src/core/services/http.service.ts:436](https://github.com/senseikatana/katanakit-js/blob/c7e103d8e15cf562c089e2f87844a6fd53e8dd46/src/core/services/http.service.ts#L436)
+Defined in: [src/core/services/http.service.ts:436](https://github.com/senseikatana/katanakit-js/blob/ce5878edd9b1e40839bf178cab1449f3852fd281/src/core/services/http.service.ts#L436)
 
 POST helper over a registered API endpoint.
 

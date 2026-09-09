@@ -1,6 +1,6 @@
 {
   "name": "katanakit-js",
-  "version": "2.12.8",
+  "version": "2.12.9",
   "description": "KatanaKit — a sharp, framework-agnostic TypeScript service toolkit organized with hexagonal architecture.",
   "type": "module",
   "main": "./dist/index.js",
@@ -53,9 +53,9 @@
     "dev": "tsx src/adapters/express/main.ts",
     "check": "biome check ./src && tsc --noEmit && vitest run",
     "fix": "biome check --write ./src && tsc --noEmit && vitest run",
-    "build": "bun run check && tsc -p tsconfig.json",
-    "release": "bun run build && npm version",
-    "docs": "cd docs && bun run"
+    "build": "yarn run check && tsc -p tsconfig.json",
+    "release": "yarn build && npm version",
+    "docs": "yarn --cwd docs"
   },
   "repository": {
     "type": "git",
