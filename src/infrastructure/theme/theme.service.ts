@@ -128,7 +128,7 @@ export const useInitTheme = (options: ThemeOptions = {}): void => {
 /**
  * Sets the theme mode and persists it to storage.
  *
- * @param mode - The desired theme mode (`"light"`, `"dark"`, or `"system"`).
+ * @param newMode - The desired theme mode (`"light"`, `"dark"`, or `"system"`).
  *
  * @example
  * ```ts

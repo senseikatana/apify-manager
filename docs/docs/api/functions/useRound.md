@@ -2,7 +2,7 @@
 
 > **useRound**(`value`, `decimals?`): `number`
 
-Defined in: [src/core/services/utils.service.ts:317](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/core/services/utils.service.ts#L317)
+Defined in: [src/core/services/utils.service.ts:317](https://github.com/senseikatana/katanakit-js/blob/c7e103d8e15cf562c089e2f87844a6fd53e8dd46/src/core/services/utils.service.ts#L317)
 
 Rounds a number (or numeric string) to the specified number of decimal
 places. Returns `0` for non-numeric input.

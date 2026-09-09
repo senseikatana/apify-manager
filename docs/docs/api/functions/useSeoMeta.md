@@ -2,7 +2,7 @@
 
 > **useSeoMeta**&lt;`OmitKeys`&gt;(`opts`, `defaults?`): [`SeoTagResult`](../type-aliases/SeoTagResult.md)
 
-Defined in: [src/config/seo.service.ts:60](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/config/seo.service.ts#L60)
+Defined in: [src/config/seo.service.ts:60](https://github.com/senseikatana/katanakit-js/blob/c7e103d8e15cf562c089e2f87844a6fd53e8dd46/src/config/seo.service.ts#L60)
 
 SEO helper: one flat object in → one flat object out (+ html/tags).
 
