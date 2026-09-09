@@ -173,7 +173,11 @@ export function useGetApisConfig(): ApisConfig {
  * const url = useBuildUrl("pokeapi", "pokemonById", { params: { id: 25 } });
  * ```
  */
-export function useBuildUrl(apiName: string, endpointName: string, options: UrlOptions = {}): string {
+export function useBuildUrl(
+	apiName: string,
+	endpointName: string,
+	options: UrlOptions = {},
+): string {
 	const { params, query, ignoreDefaultQuery = false } = options;
 	const api = getApiEntry(apiName);
 	let path = api.endpoints?.[endpointName] ?? "";

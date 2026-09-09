@@ -2,7 +2,7 @@
 
 > **useToCm**(`inches`, `locale?`, `digits?`): `string`
 
-Defined in: [src/core/services/formatter.service.ts:92](https://github.com/senseikatana/katanakit-js/blob/4e4c1f0ceca5dc347e3c16a4bcff846721a632f3/src/core/services/formatter.service.ts#L92)
+Defined in: [src/core/services/formatter.service.ts:264](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/core/services/formatter.service.ts#L264)
 
 Pure: inches → centimeters (formatted).
 
@@ -12,14 +12,30 @@ Pure: inches → centimeters (formatted).
 
 `number`
 
+Length in inches.
+
 ### locale?
 
 [`Locale`](../type-aliases/Locale.md) = `"en"`
+
+BCP 47 locale tag. Defaults to `"en"`.
 
 ### digits?
 
 `number` = `2`
 
+Fraction digits. Defaults to `2`.
+
 ## Returns
 
 `string`
+
+The formatted centimeter string.
+
+## Example
+
+```ts
+import { useToCm } from "katanakit-js";
+
+useToCm(1); // "2.54"
+```

@@ -37,14 +37,14 @@ export async function useGetMediaStream(
 	constraints: MediaStreamConstraints = { video: true, audio: true },
 ): Promise<MediaStream | null> {
 	if (!isBrowser() || !navigator.mediaDevices?.getUserMedia) {
-		useLogger("[getMediaStream] API not supported in this environment.", "warn");
+		useLogger("warn", "[getMediaStream] API not supported in this environment.");
 		return null;
 	}
 
 	try {
 		return await navigator.mediaDevices.getUserMedia(constraints);
 	} catch (error) {
-		useLogger("[getMediaStream] Permission denied or error:", error, "error");
+		useLogger("error", "[getMediaStream] Permission denied or error:", error);
 		return null;
 	}
 }
@@ -126,7 +126,7 @@ export async function useGetGeolocation(options?: PositionOptions): Promise<GeoP
 				});
 			},
 			(error) => {
-				useLogger("[getGeolocation] Error:", error.message, "error");
+				useLogger("error", "[getGeolocation] Error:", error.message);
 				resolve(null);
 			},
 			{ enableHighAccuracy: true, timeout: 10000, ...options },
@@ -165,7 +165,7 @@ export function useWatchGeolocation(
 			});
 		},
 		(error) => {
-			useLogger("[watchGeolocation] Error:", error.message, "error");
+			useLogger("error", "[watchGeolocation] Error:", error.message);
 		},
 		{ enableHighAccuracy: true, ...options },
 	);
@@ -206,7 +206,7 @@ export async function useRequestMotionPermission(): Promise<boolean> {
 			const response = await DeviceOrientationEventExtended.requestPermission();
 			return response === "granted";
 		} catch (error) {
-			useLogger("[requestMotionPermission] Error:", error, "error");
+			useLogger("error", "[requestMotionPermission] Error:", error);
 			return false;
 		}
 	}
@@ -227,7 +227,9 @@ export async function useRequestMotionPermission(): Promise<boolean> {
  * });
  * ```
  */
-export function useOnDeviceOrientation(callback: (event: DeviceOrientationEvent) => void): (() => void) | null {
+export function useOnDeviceOrientation(
+	callback: (event: DeviceOrientationEvent) => void,
+): (() => void) | null {
 	if (!isBrowser() || typeof DeviceOrientationEvent === "undefined") return null;
 
 	window.addEventListener("deviceorientation", callback);
@@ -250,7 +252,9 @@ export function useOnDeviceOrientation(callback: (event: DeviceOrientationEvent)
  * });
  * ```
  */
-export function useOnDeviceMotion(callback: (event: DeviceMotionEvent) => void): (() => void) | null {
+export function useOnDeviceMotion(
+	callback: (event: DeviceMotionEvent) => void,
+): (() => void) | null {
 	if (!isBrowser()) return null;
 
 	window.addEventListener("devicemotion", callback);
@@ -321,7 +325,7 @@ export async function useGetBattery(): Promise<BatteryManager | null> {
 	try {
 		return await nav.getBattery();
 	} catch (error) {
-		useLogger("[getBattery] Error:", error, "error");
+		useLogger("error", "[getBattery] Error:", error);
 		return null;
 	}
 }

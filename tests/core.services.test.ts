@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useCustom, useInternal, useNotFound } from "@/core/services/error.service";
+import { useErrorCustom } from "@/core/services/error.service";
 import { useToMiles } from "@/core/services/formatter.service";
 import { GeometryUtils } from "@/core/services/geometry.service";
 import {
@@ -39,17 +39,23 @@ describe("GeometryUtils", () => {
 	});
 });
 
-describe("ErrorFactoryService", () => {
-	it("creates typed errors with status codes", () => {
-		expect(useNotFound("Missing").code).toBe(404);
-		expect(useInternal().code).toBe(500);
+describe("ErrorService", () => {
+	it("creates errors with status codes", () => {
+		expect(useErrorCustom("Missing", 404).code).toBe(404);
+		expect(useErrorCustom("Server Error", 500).code).toBe(500);
 	});
 
-	it("serializes an error", () => {
-		expect(useCustom("Teapot", 418).useToJson()).toEqual({
-			name: "AppError",
+	it("serializes an error with message and code", () => {
+		expect(useErrorCustom("Teapot", 418)).toEqual({
 			message: "Teapot",
 			code: 418,
+		});
+	});
+
+	it("uses default message when empty", () => {
+		expect(useErrorCustom("", 404)).toEqual({
+			message: "Not Found",
+			code: 404,
 		});
 	});
 });

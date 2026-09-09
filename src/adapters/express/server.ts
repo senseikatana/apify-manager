@@ -120,7 +120,7 @@ export const useExpressStart = (port = 3000, host = "localhost"): void => {
 	const expressApp = useExpressCreate();
 
 	expressApp.listen(port, host, () => {
-		useLogger(`Server running on http://${host}:${port}`);
+		useLogger("info", `Server running on http://${host}:${port}`);
 	});
 };
 

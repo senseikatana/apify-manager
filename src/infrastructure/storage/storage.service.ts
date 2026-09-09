@@ -197,9 +197,7 @@ function tryCreateWebStorage(kind: "localStorage" | "sessionStorage"): StorageSt
 		const probeKey = "__kk_storage_probe__";
 		storage.setItem(probeKey, "1");
 		storage.removeItem(probeKey);
-		return kind === "localStorage"
-			? LocalStorageStrategy(storage)
-			: SessionStorageStrategy(storage);
+		return kind === "localStorage" ? LocalStorageStrategy(storage) : SessionStorageStrategy(storage);
 	} catch {
 		return null;
 	}

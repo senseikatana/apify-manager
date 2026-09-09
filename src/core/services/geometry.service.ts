@@ -239,12 +239,7 @@ const perimeter = {
 	 * GeometryUtils.perimeter.useTriangle(3, 4, 5); // "12.00"
 	 * ```
 	 */
-	useTriangle(
-		side1: number,
-		side2: number,
-		side3: number,
-		options?: GeometryFormatOptions,
-	): string {
+	useTriangle(side1: number, side2: number, side3: number, options?: GeometryFormatOptions): string {
 		return formatGeometry(side1 + side2 + side3, options);
 	},
 
@@ -399,12 +394,7 @@ const volume = {
 	 * GeometryUtils.volume.useBox(2, 3, 4); // "24.00"
 	 * ```
 	 */
-	useBox(
-		length: number,
-		width: number,
-		height: number,
-		options?: GeometryFormatOptions,
-	): string {
+	useBox(length: number, width: number, height: number, options?: GeometryFormatOptions): string {
 		return formatGeometry(length * width * height, options);
 	},
 

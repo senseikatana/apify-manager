@@ -1,3 +1,3 @@
-import ServerExpress from "./server.js";
-ServerExpress.getInstance().useStart();
+import { useExpressStart } from "./server.js";
+useExpressStart();
 //# sourceMappingURL=main.js.map

@@ -87,12 +87,10 @@ export function useCreateSignal<T>(initialValue: T): [SignalGetter<T>, SignalSet
 	return [get, set];
 }
 
-
 const [counter, updateCounter] = useCreateSignal(0);
 
-useLogger('log', 'Counter values is: ', counter);
-useLogger('log', 'Counter updated is: ', updateCounter(1))
-
+useLogger("log", "Counter values is: ", counter);
+useLogger("log", "Counter updated is: ", updateCounter(1));
 
 /**
  * Creates a side effect that re-runs whenever any of the provided signals
@@ -119,7 +117,7 @@ useLogger('log', 'Counter updated is: ', updateCounter(1))
 export function useCreateEffect(
 	callback: () => void | (() => void),
 	signals: Subscribable<unknown>[],
-): (() => void) {
+): () => void {
 	let cleanup: void | (() => void);
 
 	const execute = () => {
@@ -127,14 +125,14 @@ export function useCreateEffect(
 			try {
 				cleanup();
 			} catch (error) {
-					useLogger("error", "[createEffect] Previous cleanup error:", error);
+				useLogger("error", "[createEffect] Previous cleanup error:", error);
 			}
 		}
 
 		try {
 			cleanup = callback() as void | (() => void);
 		} catch (error) {
-				useLogger("error", "[createEffect] Effect execution error:", error);
+			useLogger("error", "[createEffect] Effect execution error:", error);
 		}
 	};
 
@@ -152,7 +150,7 @@ export function useCreateEffect(
 			try {
 				cleanup();
 			} catch (error) {
-					useLogger("error", "[createEffect] Final cleanup error:", error);
+				useLogger("error", "[createEffect] Final cleanup error:", error);
 			}
 		}
 		for (const unsub of unsubscribes) {
@@ -248,7 +246,7 @@ export function useCreateStorageSignal<T>(
 			initial = stored;
 		}
 	} catch (error) {
-			useLogger("error", `[createStorageSignal] Error reading from ${target}:`, error);
+		useLogger("error", `[createStorageSignal] Error reading from ${target}:`, error);
 	}
 
 	const [get, set] = useCreateSignal<T>(initial);
@@ -260,7 +258,7 @@ export function useCreateStorageSignal<T>(
 			try {
 				useSetStorage(key, newValue, target);
 			} catch (error) {
-					useLogger("error", `[createStorageSignal] Error writing to ${target}:`, error);
+				useLogger("error", `[createStorageSignal] Error writing to ${target}:`, error);
 			}
 
 			return newValue;
@@ -342,7 +340,7 @@ export function useCreateBatch(): (callback: () => void) => void {
 		try {
 			callback();
 		} catch (error) {
-				useLogger("error", "[createBatch] Batch block error:", error);
+			useLogger("error", "[createBatch] Batch block error:", error);
 		} finally {
 			if (!wasBatching) {
 				isBatching = false;

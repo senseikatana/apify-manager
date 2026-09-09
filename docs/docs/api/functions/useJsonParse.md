@@ -2,7 +2,7 @@
 
 > **useJsonParse**&lt;`T`&gt;(`json`): `T`
 
-Defined in: [src/core/services/formatter.service.ts:62](https://github.com/senseikatana/katanakit-js/blob/4e4c1f0ceca5dc347e3c16a4bcff846721a632f3/src/core/services/formatter.service.ts#L62)
+Defined in: [src/core/services/formatter.service.ts:148](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/core/services/formatter.service.ts#L148)
 
 Pure: parse JSON (throws on invalid input — same as `JSON.parse`).
 
@@ -18,6 +18,19 @@ Pure: parse JSON (throws on invalid input — same as `JSON.parse`).
 
 `string`
 
+The JSON string to parse.
+
 ## Returns
 
 `T`
+
+The parsed value typed as `T`.
+
+## Example
+
+```ts
+import { useJsonParse } from "katanakit-js";
+
+const obj = useJsonParse<{ a: number }>('{"a":1}');
+// { a: 1 }
+```

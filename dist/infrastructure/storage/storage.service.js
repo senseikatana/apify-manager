@@ -1,54 +1,62 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+// ============================================================
+// Strategy factories (plain objects implementing StorageStrategy)
+// ============================================================
 /**
- * Base strategy handling safe JSON serialization over a Web Storage backend.
+ * Creates a `StorageStrategy` backed by a Web Storage backend (`localStorage`
+ * or `sessionStorage`) with safe JSON serialization and error handling.
+ *
+ * @param storage - A native `Storage` instance (e.g. `window.localStorage`).
+ * @returns A {@link StorageStrategy} object.
  */
-class WebStorageStrategy {
-    storage;
-    constructor(storage) {
-        this.storage = storage;
-    }
-    useGetItem(key) {
-        try {
-            const raw = this.storage.getItem(key);
-            return raw ? JSON.parse(raw) : null;
-        }
-        catch {
+function createWebStorageStrategy(storage) {
+    return {
+        useGetItem(key) {
             try {
-                return this.storage.getItem(key);
+                const raw = storage.getItem(key);
+                return raw ? JSON.parse(raw) : null;
             }
             catch {
-                return null;
+                try {
+                    return storage.getItem(key);
+                }
+                catch {
+                    return null;
+                }
             }
-        }
-    }
-    useSetItem(key, value) {
-        try {
-            const serialized = typeof value === "string" ? value : JSON.stringify(value);
-            this.storage.setItem(key, serialized);
-        }
-        catch {
-            // Quota exceeded, private mode, or unavailable storage — ignore.
-        }
-    }
-    useRemoveItem(key) {
-        try {
-            this.storage.removeItem(key);
-        }
-        catch {
-            // Ignore unavailable storage.
-        }
-    }
-    useClear() {
-        try {
-            this.storage.clear();
-        }
-        catch {
-            // Ignore unavailable storage.
-        }
-    }
+        },
+        useSetItem(key, value) {
+            try {
+                const serialized = typeof value === "string" ? value : JSON.stringify(value);
+                storage.setItem(key, serialized);
+            }
+            catch {
+                // Quota exceeded, private mode, or unavailable storage — ignore.
+            }
+        },
+        useRemoveItem(key) {
+            try {
+                storage.removeItem(key);
+            }
+            catch {
+                // Ignore unavailable storage.
+            }
+        },
+        useClear() {
+            try {
+                storage.clear();
+            }
+            catch {
+                // Ignore unavailable storage.
+            }
+        },
+    };
 }
+// ============================================================
+// In-memory Storage implementation
+// ============================================================
 /**
- * In-memory Web Storage implementation used as an SSR / private-mode fallback.
+ * In-memory `Storage` implementation used as an SSR / private-mode fallback.
  * Each instance owns its own Map — never share one across requests.
  */
 class MemoryStorage {
@@ -73,47 +81,89 @@ class MemoryStorage {
     }
 }
 /**
- * Concrete strategy backed by `window.localStorage`.
+ * Creates a new in-memory `Storage` instance.
+ *
+ * @returns A fresh `MemoryStorage` that conforms to the Web Storage API.
+ *
+ * @example
+ * ```ts
+ * const mem = createMemoryStorage();
+ * mem.setItem("key", JSON.stringify({ a: 1 }));
+ * ```
  */
-export class LocalStorageStrategy extends WebStorageStrategy {
-    constructor(storage = window.localStorage) {
-        super(storage);
-    }
+export function createMemoryStorage() {
+    return new MemoryStorage();
+}
+// ============================================================
+// Concrete strategy factories
+// ============================================================
+/**
+ * Creates a strategy backed by `window.localStorage`.
+ *
+ * @param storage - Optional storage instance (defaults to `window.localStorage`).
+ * @returns A {@link StorageStrategy}.
+ *
+ * @example
+ * ```ts
+ * const strategy = LocalStorageStrategy();
+ * strategy.useSetItem("token", "abc123");
+ * ```
+ */
+export function LocalStorageStrategy(storage = window.localStorage) {
+    return createWebStorageStrategy(storage);
 }
 /**
- * Concrete strategy backed by `window.sessionStorage`.
+ * Creates a strategy backed by `window.sessionStorage`.
+ *
+ * @param storage - Optional storage instance (defaults to `window.sessionStorage`).
+ * @returns A {@link StorageStrategy}.
+ *
+ * @example
+ * ```ts
+ * const strategy = SessionStorageStrategy();
+ * strategy.useSetItem("session", data);
+ * ```
  */
-export class SessionStorageStrategy extends WebStorageStrategy {
-    constructor(storage = window.sessionStorage) {
-        super(storage);
-    }
+export function SessionStorageStrategy(storage = window.sessionStorage) {
+    return createWebStorageStrategy(storage);
 }
 /**
- * Concrete strategy backed by an in-memory store (SSR / private-mode fallback).
+ * Creates a strategy backed by an in-memory store (SSR / private-mode fallback).
+ *
+ * @returns A {@link StorageStrategy} using an in-memory `Storage` backend.
+ *
+ * @example
+ * ```ts
+ * const strategy = MemoryStorageStrategy();
+ * strategy.useSetItem("temp", "value");
+ * ```
  */
-export class MemoryStorageStrategy extends WebStorageStrategy {
-    constructor() {
-        super(new MemoryStorage());
-    }
+export function MemoryStorageStrategy() {
+    return createWebStorageStrategy(createMemoryStorage());
 }
 /** Request-scoped storage strategies for SSR (avoids cross-request leaks). */
 const ssrStorageAls = new AsyncLocalStorage();
+/** Lazily-initialized browser strategies (cached once). */
+let browserStrategies = null;
 function createMemoryStrategies() {
     return {
-        localStorage: new MemoryStorageStrategy(),
-        sessionStorage: new MemoryStorageStrategy(),
+        localStorage: MemoryStorageStrategy(),
+        sessionStorage: MemoryStorageStrategy(),
     };
 }
 function tryCreateBrowserStrategies() {
     const local = tryCreateWebStorage("localStorage");
     const session = tryCreateWebStorage("sessionStorage");
     return {
-        localStorage: local ?? new MemoryStorageStrategy(),
-        sessionStorage: session ?? new MemoryStorageStrategy(),
+        localStorage: local ?? MemoryStorageStrategy(),
+        sessionStorage: session ?? MemoryStorageStrategy(),
     };
 }
 /**
  * Probes Web Storage availability (Safari private mode throws on setItem).
+ *
+ * @param kind - Which storage backend to probe.
+ * @returns A {@link StorageStrategy} or `null` if the backend is unavailable.
  */
 function tryCreateWebStorage(kind) {
     try {
@@ -121,18 +171,42 @@ function tryCreateWebStorage(kind) {
         const probeKey = "__kk_storage_probe__";
         storage.setItem(probeKey, "1");
         storage.removeItem(probeKey);
-        return kind === "localStorage"
-            ? new LocalStorageStrategy(storage)
-            : new SessionStorageStrategy(storage);
+        return kind === "localStorage" ? LocalStorageStrategy(storage) : SessionStorageStrategy(storage);
     }
     catch {
         return null;
     }
 }
 /**
+ * Resolves the active strategy map: browser strategies (cached), ALS-scoped
+ * strategies (SSR request), or ephemeral memory strategies (SSR fallback).
+ */
+function getStrategies() {
+    const hasWindow = typeof window !== "undefined";
+    if (hasWindow) {
+        if (!browserStrategies) {
+            browserStrategies = tryCreateBrowserStrategies();
+        }
+        return browserStrategies;
+    }
+    // SSR: prefer ALS-scoped strategies (isolated per request).
+    const scoped = ssrStorageAls.getStore();
+    if (scoped)
+        return scoped;
+    // No scope — ephemeral store (no cross-request leak, no cross-call persistence).
+    return createMemoryStrategies();
+}
+// ============================================================
+// Public API
+// ============================================================
+/**
  * Runs `fn` with request-isolated in-memory storage (SSR).
  * Use this around a request handler so `useSetStorage` / `useGetStorage`
  * share state within the request but not across requests.
+ *
+ * @typeParam T - Return type of `fn`.
+ * @param fn - The function to run within the storage scope.
+ * @returns The return value of `fn`.
  *
  * @example
  * ```ts
@@ -150,43 +224,55 @@ export function useRunStorageScope(fn) {
     return ssrStorageAls.run(createMemoryStrategies(), fn);
 }
 /**
- * Storage facade (Singleton + Strategy). Lazily picks browser storage or an
- * in-memory fallback so importing this module never crashes in SSR (Node/Bun).
+ * Retrieves a value from storage by key.
  *
- * In SSR, strategies are **not** cached on the singleton (that would leak data
- * across requests). Prefer {@link useRunStorageScope} for request-scoped
- * persistence; without a scope, each call uses a fresh ephemeral store.
+ * @typeParam T - Expected value type.
+ * @param key - The storage key.
+ * @param target - Which storage backend to use (default: `"localStorage"`).
+ * @returns The deserialized value, or `null` if not found.
+ *
+ * @example
+ * ```ts
+ * const token = useGetStorage<string>("auth_token");
+ * const session = useGetStorage<SessionData>("session", "sessionStorage");
+ * ```
  */
-export default class StorageService {
-    static instance;
-    browserStrategies = null;
-    constructor() { }
-    static getInstance() {
-        if (!StorageService.instance) {
-            StorageService.instance = new StorageService();
-        }
-        return StorageService.instance;
-    }
-    getStrategies() {
-        const hasWindow = typeof window !== "undefined";
-        if (hasWindow) {
-            if (!this.browserStrategies) {
-                this.browserStrategies = tryCreateBrowserStrategies();
-            }
-            return this.browserStrategies;
-        }
-        // SSR: prefer ALS-scoped strategies (isolated per request).
-        const scoped = ssrStorageAls.getStore();
-        if (scoped)
-            return scoped;
-        // No scope — ephemeral store (no cross-request leak, no cross-call persistence).
-        return createMemoryStrategies();
-    }
-    useGetStorage = (key, target = "localStorage") => this.getStrategies()[target].useGetItem(key);
-    useSetStorage = (key, value, target = "localStorage") => this.getStrategies()[target].useSetItem(key, value);
-    useRemoveStorage = (key, target = "localStorage") => this.getStrategies()[target].useRemoveItem(key);
-    useClearStorage = (target = "localStorage") => this.getStrategies()[target].useClear();
-}
-// Singleton instance and destructured exports.
-export const { useClearStorage, useGetStorage, useRemoveStorage, useSetStorage } = StorageService.getInstance();
+export const useGetStorage = (key, target = "localStorage") => getStrategies()[target].useGetItem(key);
+/**
+ * Stores a value under the given key (serialized as JSON).
+ *
+ * @param key - The storage key.
+ * @param value - The value to store.
+ * @param target - Which storage backend to use (default: `"localStorage"`).
+ *
+ * @example
+ * ```ts
+ * useSetStorage("auth_token", "abc123");
+ * useSetStorage("user", { name: "Alice" }, "sessionStorage");
+ * ```
+ */
+export const useSetStorage = (key, value, target = "localStorage") => getStrategies()[target].useSetItem(key, value);
+/**
+ * Removes a value from storage by key.
+ *
+ * @param key - The storage key to remove.
+ * @param target - Which storage backend to use (default: `"localStorage"`).
+ *
+ * @example
+ * ```ts
+ * useRemoveStorage("auth_token");
+ * ```
+ */
+export const useRemoveStorage = (key, target = "localStorage") => getStrategies()[target].useRemoveItem(key);
+/**
+ * Clears all values from the specified storage backend.
+ *
+ * @param target - Which storage backend to clear (default: `"localStorage"`).
+ *
+ * @example
+ * ```ts
+ * useClearStorage("sessionStorage");
+ * ```
+ */
+export const useClearStorage = (target = "localStorage") => getStrategies()[target].useClear();
 //# sourceMappingURL=storage.service.js.map

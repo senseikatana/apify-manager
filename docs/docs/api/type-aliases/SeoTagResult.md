@@ -2,7 +2,7 @@
 
 > **SeoTagResult** = [`UseSeoMetaOptions`](UseSeoMetaOptions.md) & `object`
 
-Defined in: [src/config/seo.service.ts:35](https://github.com/senseikatana/katanakit-js/blob/4e4c1f0ceca5dc347e3c16a4bcff846721a632f3/src/config/seo.service.ts#L35)
+Defined in: [src/config/seo.service.ts:35](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/config/seo.service.ts#L35)
 
 Result of [useSeoMeta](../functions/useSeoMeta.md): `html` / `tags` for the head, plus **one**
 flat object of resolved fields (site + HTML + OG). No duplicate

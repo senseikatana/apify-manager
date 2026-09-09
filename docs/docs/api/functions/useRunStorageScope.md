@@ -2,7 +2,7 @@
 
 > **useRunStorageScope**&lt;`T`&gt;(`fn`): `T`
 
-Defined in: [src/infrastructure/storage/storage.service.ts:164](https://github.com/senseikatana/katanakit-js/blob/4e4c1f0ceca5dc347e3c16a4bcff846721a632f3/src/infrastructure/storage/storage.service.ts#L164)
+Defined in: [src/infrastructure/storage/storage.service.ts:253](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/infrastructure/storage/storage.service.ts#L253)
 
 Runs `fn` with request-isolated in-memory storage (SSR).
 Use this around a request handler so `useSetStorage` / `useGetStorage`
@@ -14,15 +14,21 @@ share state within the request but not across requests.
 
 `T`
 
+Return type of `fn`.
+
 ## Parameters
 
 ### fn
 
 () => `T`
 
+The function to run within the storage scope.
+
 ## Returns
 
 `T`
+
+The return value of `fn`.
 
 ## Example
 

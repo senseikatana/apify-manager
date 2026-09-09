@@ -2,10 +2,11 @@
 
 > **useOmit**&lt;`T`, `K`&gt;(`obj`, `keys`): `Omit`&lt;`T`, `K`&gt;
 
-Defined in: [src/core/services/utils.service.ts:89](https://github.com/senseikatana/katanakit-js/blob/4e4c1f0ceca5dc347e3c16a4bcff846721a632f3/src/core/services/utils.service.ts#L89)
+Defined in: [src/core/services/utils.service.ts:204](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/core/services/utils.service.ts#L204)
 
-Pure: shallow omit listed keys into a new object.
-(Shallow on purpose — avoids `structuredClone` failures on non-cloneable values.)
+Omits the listed keys from an object, returning a shallow copy without
+them. Shallow on purpose to avoid `structuredClone` failures on
+non-cloneable values.
 
 ## Type Parameters
 
@@ -13,9 +14,13 @@ Pure: shallow omit listed keys into a new object.
 
 `T` *extends* `object`
 
+Source object type.
+
 ### K
 
 `K` *extends* `string` \| `number` \| `symbol`
+
+Keys to omit.
 
 ## Parameters
 
@@ -23,10 +28,23 @@ Pure: shallow omit listed keys into a new object.
 
 `T`
 
+The source object.
+
 ### keys
 
 `K`[]
 
+Array of keys to exclude.
+
 ## Returns
 
 `Omit`&lt;`T`, `K`&gt;
+
+A new object without the omitted keys.
+
+## Example
+
+```ts
+const user = { id: 1, name: "Alice", password: "secret" };
+useOmit(user, ["password"]); // { id: 1, name: "Alice" }
+```

@@ -1,25 +1,37 @@
-import type { IErrorFactory, ISerializedError } from "../../types/index.js";
+import type { ISerializedError } from "../../types/index.js";
 /**
- * Decoupled application error. Carries an HTTP-style status code.
+ * Serialize an error into a plain object.
+ * Uses sensible defaults based on the status code when message is omitted.
+ *
+ * @param message - Error message (falls back to status code default)
+ * @param code - HTTP status code (default: 400)
+ * @returns Serialized error with message and code
+ *
+ * @example
+ * ```ts
+ * const err = useErrorSerialize("User not found", 404);
+ * // { message: "User not found", code: 404 }
+ *
+ * const err2 = useErrorSerialize("", 500);
+ * // { message: "Internal Server Error", code: 500 }
+ * ```
  */
-export declare class AppError extends Error {
-    readonly code: number;
-    constructor(message?: string, code?: number);
-    useToJson: () => ISerializedError;
-}
+export declare function useErrorSerialize(message?: string, code?: number): ISerializedError;
 /**
- * Error factory implemented as a singleton (Factory Method pattern).
+ * Create a custom error object. Use with `useLogger` for consistent error logging.
+ *
+ * @param msg - Error message
+ * @param code - HTTP status code
+ * @returns Serialized error with message and code
+ *
+ * @example
+ * ```ts
+ * import { useErrorCustom, useLogger } from "katanakit-js";
+ *
+ * const error = useErrorCustom("User not found", 404);
+ * useLogger("error", error.message, error);
+ * // { message: "User not found", code: 404 }
+ * ```
  */
-export declare class ErrorFactoryService implements IErrorFactory {
-    private static instance;
-    private constructor();
-    static getInstance(): ErrorFactoryService;
-    useBadRequest: (message?: string) => AppError;
-    useUnauthorized: (message?: string) => AppError;
-    useForbidden: (message?: string) => AppError;
-    useNotFound: (message?: string) => AppError;
-    useInternal: (message?: string) => AppError;
-    useCustom: (message: string, code: number) => AppError;
-}
-export declare const useBadRequest: (message?: string) => AppError, useUnauthorized: (message?: string) => AppError, useForbidden: (message?: string) => AppError, useNotFound: (message?: string) => AppError, useInternal: (message?: string) => AppError, useCustom: (message: string, code: number) => AppError;
+export declare function useErrorCustom(msg: string, code: number): ISerializedError;
 //# sourceMappingURL=error.service.d.ts.map

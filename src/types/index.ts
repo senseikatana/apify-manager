@@ -1,5 +1,4 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import type { AppError } from "../core/services/error.service.js";
 
 /* -------------------------------------------------------------------------- */
 /* Logging                                                                    */
@@ -317,22 +316,21 @@ export interface IFetchApiManager {
 /* Errors                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/** Serialized shape returned by {@link AppError.useToJson}. */
+/** Serialized error shape. */
 export interface ISerializedError {
-	name: string;
 	message: string;
 	code: number;
 }
 
 /** Contract of the error factory. */
-export interface IErrorFactory {
-	useBadRequest(message?: string): AppError;
-	useUnauthorized(message?: string): AppError;
-	useForbidden(message?: string): AppError;
-	useNotFound(message?: string): AppError;
-	useInternal(message?: string): AppError;
-	useCustom(message: string, code: number): AppError;
-}
+// export interface IErrorFactory {
+// 	useBadRequest(message?: string): AppError;
+// 	useUnauthorized(message?: string): AppError;
+// 	useForbidden(message?: string): AppError;
+// 	useNotFound(message?: string): AppError;
+// 	useInternal(message?: string): AppError;
+// 	useCustom(message: string, code: number): AppError;
+// }
 
 /* -------------------------------------------------------------------------- */
 /* Formatter / Converter                                                      */

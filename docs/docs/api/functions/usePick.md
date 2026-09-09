@@ -2,9 +2,9 @@
 
 > **usePick**&lt;`T`, `K`&gt;(`obj`, `keys`): `Pick`&lt;`T`, `K`&gt;
 
-Defined in: [src/core/services/utils.service.ts:75](https://github.com/senseikatana/katanakit-js/blob/4e4c1f0ceca5dc347e3c16a4bcff846721a632f3/src/core/services/utils.service.ts#L75)
+Defined in: [src/core/services/utils.service.ts:177](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/core/services/utils.service.ts#L177)
 
-Pure: pick listed keys into a new object.
+Picks the listed keys from an object into a new object.
 
 ## Type Parameters
 
@@ -12,9 +12,13 @@ Pure: pick listed keys into a new object.
 
 `T` *extends* `object`
 
+Source object type.
+
 ### K
 
 `K` *extends* `string` \| `number` \| `symbol`
+
+Keys to pick.
 
 ## Parameters
 
@@ -22,10 +26,23 @@ Pure: pick listed keys into a new object.
 
 `T`
 
+The source object.
+
 ### keys
 
 `K`[]
 
+Array of keys to include.
+
 ## Returns
 
 `Pick`&lt;`T`, `K`&gt;
+
+A new object with only the picked keys.
+
+## Example
+
+```ts
+const user = { id: 1, name: "Alice", email: "a@b.com" };
+usePick(user, ["id", "name"]); // { id: 1, name: "Alice" }
+```

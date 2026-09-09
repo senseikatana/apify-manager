@@ -54,8 +54,8 @@
     "check": "biome check ./src && tsc --noEmit && vitest run",
     "fix": "biome check --write ./src && tsc --noEmit && vitest run",
     "build": "bun run check && tsc -p tsconfig.json",
-    "release": "bun run build && bunx version",
-    "docs": "bun --cwd docs"
+    "release": "bun run build && npm version",
+    "docs": "cd docs && bun run"
   },
   "repository": {
     "type": "git",

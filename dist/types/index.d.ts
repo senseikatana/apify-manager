@@ -1,5 +1,4 @@
 import type { Temporal } from "@js-temporal/polyfill";
-import type { AppError } from "../core/services/error.service.js";
 export type LogLevel = "log" | "info" | "warn" | "error" | "debug";
 /** Strategy contract: defines the output using type-safe levels. */
 export interface LogStrategy {
@@ -180,21 +179,12 @@ export interface IFetchApiManager {
     usePatch<T = unknown>(apiName: string, endpointName: string, body?: unknown, urlOptions?: UrlOptions): Promise<FetchResult<T>>;
     useDelete<T = unknown>(apiName: string, endpointName: string, urlOptions?: UrlOptions): Promise<FetchResult<T>>;
 }
-/** Serialized shape returned by {@link AppError.useToJson}. */
+/** Serialized error shape. */
 export interface ISerializedError {
-    name: string;
     message: string;
     code: number;
 }
 /** Contract of the error factory. */
-export interface IErrorFactory {
-    useBadRequest(message?: string): AppError;
-    useUnauthorized(message?: string): AppError;
-    useForbidden(message?: string): AppError;
-    useNotFound(message?: string): AppError;
-    useInternal(message?: string): AppError;
-    useCustom(message: string, code: number): AppError;
-}
 /** Contract of the formatter facade. */
 export interface IFormatterService {
     useCapitalize(text: string, locale?: Locale): string;

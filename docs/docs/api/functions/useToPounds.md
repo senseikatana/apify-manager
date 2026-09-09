@@ -2,7 +2,7 @@
 
 > **useToPounds**(`kilos`, `locale?`, `digits?`): `string`
 
-Defined in: [src/core/services/formatter.service.ts:102](https://github.com/senseikatana/katanakit-js/blob/4e4c1f0ceca5dc347e3c16a4bcff846721a632f3/src/core/services/formatter.service.ts#L102)
+Defined in: [src/core/services/formatter.service.ts:302](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/core/services/formatter.service.ts#L302)
 
 Pure: kilograms → pounds (formatted).
 
@@ -12,14 +12,30 @@ Pure: kilograms → pounds (formatted).
 
 `number`
 
+Weight in kilograms.
+
 ### locale?
 
 [`Locale`](../type-aliases/Locale.md) = `"en"`
+
+BCP 47 locale tag. Defaults to `"en"`.
 
 ### digits?
 
 `number` = `2`
 
+Fraction digits. Defaults to `2`.
+
 ## Returns
 
 `string`
+
+The formatted pound string.
+
+## Example
+
+```ts
+import { useToPounds } from "katanakit-js";
+
+useToPounds(1); // "2.20"
+```

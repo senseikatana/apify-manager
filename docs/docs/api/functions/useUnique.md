@@ -2,9 +2,9 @@
 
 > **useUnique**&lt;`T`&gt;(`array`): `T`[]
 
-Defined in: [src/core/services/utils.service.ts:4](https://github.com/senseikatana/katanakit-js/blob/4e4c1f0ceca5dc347e3c16a4bcff846721a632f3/src/core/services/utils.service.ts#L4)
+Defined in: [src/core/services/utils.service.ts:14](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/core/services/utils.service.ts#L14)
 
-Pure: unique values preserving first-seen order.
+Returns a new array with duplicate values removed, preserving first-seen order.
 
 ## Type Parameters
 
@@ -12,12 +12,25 @@ Pure: unique values preserving first-seen order.
 
 `T`
 
+Element type.
+
 ## Parameters
 
 ### array
 
 `T`[]
 
+The input array.
+
 ## Returns
 
 `T`[]
+
+A new array with unique values.
+
+## Example
+
+```ts
+useUnique([1, 2, 2, 3, 1]); // [1, 2, 3]
+useUnique(["a", "b", "a"]); // ["a", "b"]
+```

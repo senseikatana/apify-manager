@@ -13,10 +13,10 @@ import type {
 // ============================================================
 
 /** Registry of active IntersectionObserver instances keyed by string. */
-let registry: Map<string, ObserverEntry> = new Map();
+const registry: Map<string, ObserverEntry> = new Map();
 
 /** Registry of active lazy-loader entries keyed by string. */
-let lazyRegistry: Map<string, LazyLoaderEntry> = new Map();
+const lazyRegistry: Map<string, LazyLoaderEntry> = new Map();
 
 // ============================================================
 // Internal helpers
@@ -75,7 +75,7 @@ export function useObserverCreate(
 	autoUnobserve = true,
 ): void {
 	if (!useIsSupported()) {
-		useLogger("[ObserverService] IntersectionObserver not supported.", "warn");
+		useLogger("warn", "[ObserverService] IntersectionObserver not supported.");
 		return;
 	}
 
@@ -116,7 +116,7 @@ export function useObserverObserve(key: string, element: ObserverTarget): void {
 
 	const target = resolveTarget(element);
 	if (!target) {
-		useLogger(`[ObserverService] Target not found for key "${key}":`, element, "warn");
+		useLogger("warn", `[ObserverService] Target not found for key "${key}":`, element);
 		return;
 	}
 
@@ -225,7 +225,11 @@ export function useObserverKeys(): string[] {
  * useLazyLoaderInit("gallery", "img[data-src]", "300px");
  * ```
  */
-export function useLazyLoaderInit(key = "default", selector = "img[data-src]", rootMargin = "200px"): void {
+export function useLazyLoaderInit(
+	key = "default",
+	selector = "img[data-src]",
+	rootMargin = "200px",
+): void {
 	if (!useIsSupported()) return;
 
 	if (lazyRegistry.has(key)) {

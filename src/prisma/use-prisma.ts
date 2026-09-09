@@ -69,9 +69,7 @@ let client: ReturnType<typeof postgres<Contract>> | null = null;
  * const posts = await db.public.Post.findMany();
  * ```
  */
-export function usePrismaClient(
-	datasourceUrl?: string,
-): ReturnType<typeof postgres<Contract>> {
+export function usePrismaClient(datasourceUrl?: string): ReturnType<typeof postgres<Contract>> {
 	if (!client) {
 		const url = datasourceUrl ?? process.env.DATABASE_URL;
 		if (!url) {
@@ -88,12 +86,4 @@ export function usePrismaClient(
 	return client;
 }
 
-
-
-
-
-export const prisma = usePrismaClient()
-
-
-
-
+export const prisma = usePrismaClient();

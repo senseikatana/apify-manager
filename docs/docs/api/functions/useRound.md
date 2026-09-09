@@ -2,9 +2,10 @@
 
 > **useRound**(`value`, `decimals?`): `number`
 
-Defined in: [src/core/services/utils.service.ts:163](https://github.com/senseikatana/katanakit-js/blob/4e4c1f0ceca5dc347e3c16a4bcff846721a632f3/src/core/services/utils.service.ts#L163)
+Defined in: [src/core/services/utils.service.ts:317](https://github.com/senseikatana/katanakit-js/blob/a51b82c9ade930a813d4a773b62fd05c462a18b2/src/core/services/utils.service.ts#L317)
 
-Pure: round a number (or numeric string) to `decimals` places.
+Rounds a number (or numeric string) to the specified number of decimal
+places. Returns `0` for non-numeric input.
 
 ## Parameters
 
@@ -12,10 +13,24 @@ Pure: round a number (or numeric string) to `decimals` places.
 
 `string` \| `number`
 
+The number or numeric string to round.
+
 ### decimals?
 
 `number` = `2`
 
+Number of decimal places (defaults to `2`).
+
 ## Returns
 
 `number`
+
+The rounded number.
+
+## Example
+
+```ts
+useRound(3.14159, 2);   // 3.14
+useRound("5.678", 1);   // 5.7
+useRound("not-a-num");   // 0
+```

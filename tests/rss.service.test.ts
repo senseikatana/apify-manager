@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import RssService, {
-	useCreateRssEndpoint,
-	useGenerateRss,
-	useRssLinkTag,
+import {
+	useAstroCreateRssEndpoint,
+	useAstroGenerateRss,
+	useAstroRssLinkTag,
 } from "@/adapters/astro/rss.service";
 
 describe("RssService", () => {
-	describe("useGenerateRss", () => {
+	describe("useAstroGenerateRss", () => {
 		it("generates valid RSS 2.0 XML", () => {
-			const result = useGenerateRss({
+			const result = useAstroGenerateRss({
 				title: "My Blog",
 				description: "A test blog",
 				site: "https://example.com",
@@ -36,7 +36,7 @@ describe("RssService", () => {
 		});
 
 		it("escapes XML special characters", () => {
-			const result = useGenerateRss({
+			const result = useAstroGenerateRss({
 				title: 'Blog & "Stuff"',
 				description: "Posts about <HTML> & friends",
 				site: "https://example.com",
@@ -58,7 +58,7 @@ describe("RssService", () => {
 		});
 
 		it("returns error when title is missing", () => {
-			const result = useGenerateRss({
+			const result = useAstroGenerateRss({
 				title: "",
 				description: "test",
 				site: "https://example.com",
@@ -71,7 +71,7 @@ describe("RssService", () => {
 		});
 
 		it("returns error when site is missing", () => {
-			const result = useGenerateRss({
+			const result = useAstroGenerateRss({
 				title: "Blog",
 				description: "test",
 				site: "",
@@ -82,7 +82,7 @@ describe("RssService", () => {
 		});
 
 		it("handles items with categories and author", () => {
-			const result = useGenerateRss({
+			const result = useAstroGenerateRss({
 				title: "Blog",
 				description: "test",
 				site: "https://example.com",
@@ -106,7 +106,7 @@ describe("RssService", () => {
 		});
 
 		it("handles absolute item links", () => {
-			const result = useGenerateRss({
+			const result = useAstroGenerateRss({
 				title: "Blog",
 				description: "test",
 				site: "https://example.com",
@@ -126,7 +126,7 @@ describe("RssService", () => {
 		});
 
 		it("includes custom data and XSL stylesheet", () => {
-			const result = useGenerateRss({
+			const result = useAstroGenerateRss({
 				title: "Blog",
 				description: "test",
 				site: "https://example.com",
@@ -144,7 +144,7 @@ describe("RssService", () => {
 		});
 
 		it("sanitizes CDATA breakout sequences in content", () => {
-			const result = useGenerateRss({
+			const result = useAstroGenerateRss({
 				title: "Blog",
 				description: "test",
 				site: "https://example.com",
@@ -165,30 +165,30 @@ describe("RssService", () => {
 		});
 	});
 
-	describe("useRssLinkTag", () => {
+	describe("useAstroRssLinkTag", () => {
 		it("generates a link tag with default path", () => {
-			const tag = useRssLinkTag({ title: "My Blog" });
+			const tag = useAstroRssLinkTag({ title: "My Blog" });
 			expect(tag).toBe(
 				'<link rel="alternate" type="application/rss+xml" title="My Blog" href="/rss.xml" />',
 			);
 		});
 
 		it("generates a link tag with custom path", () => {
-			const tag = useRssLinkTag({ title: "My Blog", xmlPath: "/feed.xml" });
+			const tag = useAstroRssLinkTag({ title: "My Blog", xmlPath: "/feed.xml" });
 			expect(tag).toBe(
 				'<link rel="alternate" type="application/rss+xml" title="My Blog" href="/feed.xml" />',
 			);
 		});
 
 		it("escapes special characters in title", () => {
-			const tag = useRssLinkTag({ title: 'Blog & "Stuff"' });
+			const tag = useAstroRssLinkTag({ title: 'Blog & "Stuff"' });
 			expect(tag).toContain("Blog &amp; &quot;Stuff&quot;");
 		});
 	});
 
-	describe("useCreateRssEndpoint", () => {
+	describe("useAstroCreateRssEndpoint", () => {
 		it("returns a function", () => {
-			const handler = useCreateRssEndpoint({
+			const handler = useAstroCreateRssEndpoint({
 				title: "Blog",
 				description: "test",
 				site: "https://example.com",
@@ -198,7 +198,7 @@ describe("RssService", () => {
 		});
 
 		it("returns an RSS response when called", async () => {
-			const handler = useCreateRssEndpoint({
+			const handler = useAstroCreateRssEndpoint({
 				title: "Blog",
 				description: "test",
 				site: "https://example.com",
@@ -221,7 +221,7 @@ describe("RssService", () => {
 		});
 
 		it("supports async item factory", async () => {
-			const handler = useCreateRssEndpoint({
+			const handler = useAstroCreateRssEndpoint({
 				title: "Blog",
 				description: "test",
 				site: "https://example.com",
@@ -242,7 +242,7 @@ describe("RssService", () => {
 		});
 
 		it("uses context.site as fallback", async () => {
-			const handler = useCreateRssEndpoint({
+			const handler = useAstroCreateRssEndpoint({
 				title: "Blog",
 				description: "test",
 				site: "",
@@ -263,7 +263,7 @@ describe("RssService", () => {
 		});
 
 		it("returns 500 when site is missing everywhere", async () => {
-			const handler = useCreateRssEndpoint({
+			const handler = useAstroCreateRssEndpoint({
 				title: "Blog",
 				description: "test",
 				site: "",
@@ -272,14 +272,6 @@ describe("RssService", () => {
 
 			const response = await handler({});
 			expect(response.status).toBe(500);
-		});
-	});
-
-	describe("singleton", () => {
-		it("returns the same instance", () => {
-			const a = RssService.getInstance();
-			const b = RssService.getInstance();
-			expect(a).toBe(b);
 		});
 	});
 });

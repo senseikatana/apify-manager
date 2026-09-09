@@ -33,11 +33,25 @@ export const ConsoleStrategy: LogStrategy = {
 	},
 };
 
+/** Log level priority (lower = more verbose). */
+const LEVEL_PRIORITY: Record<LogLevel, number> = {
+	debug: 0,
+	log: 1,
+	info: 1,
+	warn: 2,
+	error: 3,
+};
+
 /** Module-level log level. Defaults to `"info"`. */
 let logLevel: LogLevel = "info";
 
 /** Module-level log strategy. Defaults to {@link ConsoleStrategy}. */
 let strategy: LogStrategy = ConsoleStrategy;
+
+/** Check if a message at the given level should be output. */
+function shouldLog(level: LogLevel): boolean {
+	return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[logLevel];
+}
 
 /**
  * Sets the active log level. Messages below this level are suppressed.
@@ -92,12 +106,17 @@ export function useSetStrategy(newStrategy: LogStrategy): void {
  * useLog({ id: 1 }, "debug");
  * ```
  */
-export function useLog(
-	messageOrData: unknown,
-	dataOrLevel?: unknown,
-	level?: LogLevel,
-): void {
+export function useLog(messageOrData: unknown, dataOrLevel?: unknown, level?: LogLevel): void {
+	// If level is explicitly provided, use it
+	if (level !== undefined) {
+		if (!shouldLog(level)) return;
+		const message = typeof messageOrData === "string" ? messageOrData : String(messageOrData);
+		strategy.useOutput(level, message, dataOrLevel);
+		return;
+	}
+
 	if (dataOrLevel === undefined) {
+		if (!shouldLog("info")) return;
 		if (typeof messageOrData === "string") {
 			strategy.useOutput("info", messageOrData);
 		} else {
@@ -106,44 +125,38 @@ export function useLog(
 		return;
 	}
 
-	if (level !== undefined || !isLogLevel(dataOrLevel)) {
-		const message = typeof messageOrData === "string" ? messageOrData : String(messageOrData);
-		strategy.useOutput(level ?? "info", message, dataOrLevel);
-		return;
-	}
-
-	if (typeof messageOrData === "string") {
-		strategy.useOutput(dataOrLevel, messageOrData);
+	if (isLogLevel(dataOrLevel)) {
+		if (!shouldLog(dataOrLevel)) return;
+		if (typeof messageOrData === "string") {
+			strategy.useOutput(dataOrLevel, messageOrData);
+		} else {
+			strategy.useOutput(dataOrLevel, "", messageOrData);
+		}
 	} else {
-		strategy.useOutput(dataOrLevel, "", messageOrData);
+		if (!shouldLog("info")) return;
+		const message = typeof messageOrData === "string" ? messageOrData : String(messageOrData);
+		strategy.useOutput("info", message, dataOrLevel);
 	}
 }
 
 /**
- * Alias for {@link useLog}.
+ * Log a message with optional data and level.
  *
- * @param messageOrData - A string message or arbitrary data.
- * @param dataOrLevel - Data to attach, or the log level.
- * @param level - The log level when data is also provided.
+ * @param level - The log level ("log", "info", "warn", "error", "debug")
+ * @param message - The message to log
+ * @param data - Optional data to attach
  *
  * @example
  * ```ts
  * import { useLogger } from "katanakit-js";
  *
- * useLogger("Application started");
- * useLogger("Cache miss", "warn");
+ * useLogger("info", "Application started");
+ * useLogger("error", "Database timeout", { query: "SELECT 1" });
  * ```
  */
-export function useLogger(
-	level: LogLevel = 'log',
-	messageOrData?: unknown,
-	dataOrLevel?: unknown,
-): void {
-	useLog(messageOrData, dataOrLevel, level);
+export function useLogger(level: LogLevel = "log", message?: unknown, data?: unknown): void {
+	useLog(message, data, level);
 }
-
-
-useLogger('log', 'Message', result.ok );
 
 /**
  * Clears the console.
@@ -175,11 +188,9 @@ export function useLoggerTable(data: unknown): void {
 	console.table(data);
 }
 
-
 useLoggerTable([
-    {
-        id: 1, 
-        name: "Alice"
-    },
-    
-])
+	{
+		id: 1,
+		name: "Alice",
+	},
+]);

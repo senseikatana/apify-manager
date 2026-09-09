@@ -292,7 +292,10 @@ export const useRemoveAttribute = (target: Element | string, attr: string): void
  * const id = useGetDataAttribute("tr.row", "userId");
  * ```
  */
-export const useGetDataAttribute = (target: HTMLElement | string, key: string): string | undefined => {
+export const useGetDataAttribute = (
+	target: HTMLElement | string,
+	key: string,
+): string | undefined => {
 	return resolve<HTMLElement>(target)?.dataset[key];
 };
 
@@ -308,7 +311,11 @@ export const useGetDataAttribute = (target: HTMLElement | string, key: string): 
  * useSetDataAttribute("tr.row", "status", "active");
  * ```
  */
-export const useSetDataAttribute = (target: HTMLElement | string, key: string, value: string): void => {
+export const useSetDataAttribute = (
+	target: HTMLElement | string,
+	key: string,
+	value: string,
+): void => {
 	const el = resolve<HTMLElement>(target);
 	if (el) el.dataset[key] = value;
 };

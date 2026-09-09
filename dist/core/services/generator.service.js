@@ -1,13 +1,28 @@
 /**
- * Loads the Node.js `crypto` module lazily for PBKDF2 hashing.
+ * Lazy Node.js `crypto` strategy for PBKDF2 hashing.
  *
- * NOTE: this is a one-way hash, not encryption. Do not rely on the fixed
+ * Implemented as a plain object satisfying {@link ICryptoStrategy}.
+ * Uses dynamic `import("node:crypto")` so it works in both CJS and pure ESM
+ * environments without a top-level `require`.
+ *
+ * **NOTE:** this is a one-way hash, not encryption. Do not rely on the fixed
  * default salt for real password hashing; prefer scrypt/argon2id instead.
  */
-export class LazyNodeCryptoStrategy {
+export const LazyNodeCryptoStrategy = {
     /**
      * Derives a PBKDF2-SHA512 hash asynchronously (non-blocking).
-     * @returns `"salt:hashHex"`
+     *
+     * @param plainText - The text to hash.
+     * @param salt - Optional hex salt. When omitted a random 16-byte salt is generated.
+     * @returns `"salt:hashHex"` — the salt and the 128-char hex digest joined by a colon.
+     *
+     * @example
+     * ```ts
+     * import { LazyNodeCryptoStrategy } from "katanakit-js";
+     *
+     * const digest = await LazyNodeCryptoStrategy.useHash("secret");
+     * // => "<32-char salt>:<128-char hex>"
+     * ```
      */
     async useHash(plainText, salt) {
         const cryptoModule = await import("node:crypto");
@@ -24,18 +39,33 @@ export class LazyNodeCryptoStrategy {
             });
         });
         return `${actualSalt}:${hash}`;
-    }
+    },
     /**
-     * @deprecated Use {@link useHash} — this is PBKDF2 hashing, not encryption.
+     * @deprecated Use {@link LazyNodeCryptoStrategy.useHash} — this is PBKDF2 hashing, not encryption.
      */
     async useEncrypt(plainText, salt) {
-        return this.useHash(plainText, salt);
-    }
-}
+        return LazyNodeCryptoStrategy.useHash(plainText, salt);
+    },
+};
 /**
  * Native UUID strategy using `globalThis.crypto.randomUUID`, with a fallback.
+ *
+ * Implemented as a plain object satisfying {@link IUuidStrategy}.
  */
-export class NativeUuidStrategy {
+export const NativeUuidStrategy = {
+    /**
+     * Generates a v4 UUID string.
+     *
+     * @returns A RFC 4122 v4 UUID string.
+     *
+     * @example
+     * ```ts
+     * import { NativeUuidStrategy } from "katanakit-js";
+     *
+     * const id = NativeUuidStrategy.useGenerate();
+     * // => "3b241101-e2bb-4d7a-8615-..."
+     * ```
+     */
     useGenerate() {
         if (typeof globalThis.crypto !== "undefined" &&
             typeof globalThis.crypto.randomUUID === "function") {
@@ -46,75 +76,143 @@ export class NativeUuidStrategy {
             const v = c === "x" ? r : (r & 0x3) | 0x8;
             return v.toString(16);
         });
-    }
+    },
+};
+/** Module-level auto-incrementing numeric id counter. */
+let counter = 0;
+/**
+ * Returns the next auto-incrementing numeric id.
+ *
+ * @returns A monotonically increasing integer starting from `1`.
+ *
+ * @example
+ * ```ts
+ * import { useNumericId } from "katanakit-js";
+ *
+ * useNumericId(); // 1
+ * useNumericId(); // 2
+ * ```
+ */
+export function useNumericId() {
+    return ++counter;
 }
 /**
- * Generator facade (Singleton + Strategy) for ids, slugs, tokens and hashing.
+ * Generates a RFC 4122 v4 UUID string.
+ *
+ * @returns A UUID string.
+ *
+ * @example
+ * ```ts
+ * import { useUuid } from "katanakit-js";
+ *
+ * const id = useUuid();
+ * // => "3b241101-e2bb-4d7a-8615-..."
+ * ```
  */
-export default class GeneratorService {
-    static instance;
-    counter = 0;
-    cryptoStrategy;
-    uuidStrategy;
-    constructor() {
-        this.cryptoStrategy = new LazyNodeCryptoStrategy();
-        this.uuidStrategy = new NativeUuidStrategy();
-    }
-    static getInstance() {
-        if (!GeneratorService.instance) {
-            GeneratorService.instance = new GeneratorService();
-        }
-        return GeneratorService.instance;
-    }
-    useNumericId = () => ++this.counter;
-    useUuid = () => this.uuidStrategy.useGenerate();
-    useSlugify = (text) => {
-        if (!text)
-            throw new Error("Text is required for slugify");
-        return text
-            .toString()
-            .trim()
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/\p{M}/gu, "")
-            .replace(/\s+/g, "-")
-            .replace(/[^\w-]+/g, "")
-            .replace(/--+/g, "-")
-            .replace(/^-+/, "")
-            .replace(/-+$/, "");
-    };
-    /**
-     * Returns a cryptographically strong 6-digit numeric token (100000–999999).
-     */
-    useToken = () => {
-        if (typeof globalThis.crypto?.getRandomValues === "function") {
-            const buffer = new Uint32Array(1);
-            globalThis.crypto.getRandomValues(buffer);
-            return 100000 + (buffer[0] % 900000);
-        }
-        return Math.floor(100000 + Math.random() * 900000);
-    };
-    /**
-     * Derives a PBKDF2-SHA512 hash of `plainText`.
-     * Returns `"salt:hashHex"`. Prefer a unique salt per secret.
-     *
-     * @example
-     * ```ts
-     * import { useHash } from "katanakit-js";
-     * const digest = await useHash("secret", "optional-salt");
-     * // => "optional-salt:<128 hex chars>"
-     * ```
-     */
-    useHash = async (plainText, salt) => this.cryptoStrategy.useHash(plainText, salt);
-    /**
-     * @deprecated Use {@link useHash} — this is PBKDF2 hashing, not encryption.
-     */
-    useEncrypt = async (plainText, salt) => this.cryptoStrategy.useEncrypt(plainText, salt);
-    /**
-     * Alias for {@link useHash}.
-     */
-    usePbkdf2Hash = async (plainText, salt) => this.cryptoStrategy.useHash(plainText, salt);
+export function useUuid() {
+    return NativeUuidStrategy.useGenerate();
 }
-// Singleton instance and destructured exports.
-export const { useSlugify, useUuid, useNumericId, useToken, useHash, usePbkdf2Hash, useEncrypt, } = GeneratorService.getInstance();
+/**
+ * Converts a text string into a URL-friendly slug.
+ *
+ * @param text - The text to slugify. Must not be empty.
+ * @returns A lower-case, hyphen-separated slug with diacritics removed.
+ * @throws {Error} If `text` is empty or falsy.
+ *
+ * @example
+ * ```ts
+ * import { useSlugify } from "katanakit-js";
+ *
+ * useSlugify("Hello World!");      // "hello-world"
+ * useSlugify("  Café au Lait  ");  // "cafe-au-lait"
+ * ```
+ */
+export function useSlugify(text) {
+    if (!text)
+        throw new Error("Text is required for slugify");
+    return text
+        .toString()
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\p{M}/gu, "")
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]+/g, "")
+        .replace(/--+/g, "-")
+        .replace(/^-+/, "")
+        .replace(/-+$/, "");
+}
+/**
+ * Returns a cryptographically strong 6-digit numeric token (100000–999999).
+ *
+ * @returns A random 6-digit integer.
+ *
+ * @example
+ * ```ts
+ * import { useToken } from "katanakit-js";
+ *
+ * const code = useToken(); // e.g. 482916
+ * ```
+ */
+export function useToken() {
+    if (typeof globalThis.crypto?.getRandomValues === "function") {
+        const buffer = new Uint32Array(1);
+        globalThis.crypto.getRandomValues(buffer);
+        return 100000 + (buffer[0] % 900000);
+    }
+    return Math.floor(100000 + Math.random() * 900000);
+}
+/**
+ * Derives a PBKDF2-SHA512 hash of `plainText`.
+ * Returns `"salt:hashHex"`. Prefer a unique salt per secret.
+ *
+ * @param plainText - The text to hash.
+ * @param salt - Optional hex salt. When omitted a random 16-byte salt is generated.
+ * @returns `"salt:hashHex"` — the salt and the 128-char hex digest joined by a colon.
+ *
+ * @example
+ * ```ts
+ * import { useHash } from "katanakit-js";
+ *
+ * const digest = await useHash("secret", "optional-salt");
+ * // => "optional-salt:<128 hex chars>"
+ * ```
+ */
+export async function useHash(plainText, salt) {
+    return LazyNodeCryptoStrategy.useHash(plainText, salt);
+}
+/**
+ * @deprecated Use {@link useHash} — this is PBKDF2 hashing, not encryption.
+ *
+ * @param plainText - The text to hash.
+ * @param salt - Optional hex salt.
+ * @returns `"salt:hashHex"`.
+ *
+ * @example
+ * ```ts
+ * import { useHash } from "katanakit-js";
+ * const digest = await useHash("secret");
+ * ```
+ */
+export async function useEncrypt(plainText, salt) {
+    return LazyNodeCryptoStrategy.useHash(plainText, salt);
+}
+/**
+ * Alias for {@link useHash}.
+ *
+ * @param plainText - The text to hash.
+ * @param salt - Optional hex salt. When omitted a random 16-byte salt is generated.
+ * @returns `"salt:hashHex"`.
+ *
+ * @example
+ * ```ts
+ * import { usePbkdf2Hash } from "katanakit-js";
+ *
+ * const digest = await usePbkdf2Hash("secret");
+ * // => "<32-char salt>:<128-char hex>"
+ * ```
+ */
+export async function usePbkdf2Hash(plainText, salt) {
+    return LazyNodeCryptoStrategy.useHash(plainText, salt);
+}
 //# sourceMappingURL=generator.service.js.map

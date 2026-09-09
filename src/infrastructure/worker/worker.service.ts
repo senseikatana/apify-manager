@@ -120,7 +120,10 @@ export async function useRun<TInput, TOutput>(
  * useTerminate("heavy");
  * ```
  */
-export function useCreatePool<TInput, TOutput>(key: string, workerFunc: WorkerFunc<TInput, TOutput>): void {
+export function useCreatePool<TInput, TOutput>(
+	key: string,
+	workerFunc: WorkerFunc<TInput, TOutput>,
+): void {
 	if (!isWorkerSupported()) {
 		pools.set(key, {
 			worker: null as unknown as Worker,
