@@ -1,7 +1,14 @@
 import type { IErrorFactory, ISerializedError } from "../../types/index.js";
 
 /**
- * Decoupled application error. Carries an HTTP-style status code.
+ * Decoupled application error with HTTP-style status code.
+ *
+ * @example
+ * ```ts
+ * const error = new AppError("User not found", 404);
+ * console.log(error.code); // 404
+ * console.log(error.useToJson()); // { name: "AppError", message: "User not found", code: 404 }
+ * ```
  */
 export class AppError extends Error {
 	constructor(
@@ -13,6 +20,18 @@ export class AppError extends Error {
 		Object.setPrototypeOf(this, AppError.prototype);
 	}
 
+	/**
+	 * Serialize the error to a plain object.
+	 *
+	 * @returns Serialized error with name, message and code
+	 *
+	 * @example
+	 * ```ts
+	 * const error = new AppError("Forbidden", 403);
+	 * const serialized = error.useToJson();
+	 * // { name: "AppError", message: "Forbidden", code: 403 }
+	 * ```
+	 */
 	public useToJson = (): ISerializedError => ({
 		name: this.name,
 		message: this.message,
@@ -21,39 +40,82 @@ export class AppError extends Error {
 }
 
 /**
- * Error factory implemented as a singleton (Factory Method pattern).
+ * Create a Bad Request (400) error.
+ *
+ * @param message - Error message
+ * @returns AppError with status 400
+ *
+ * @example
+ * ```ts
+ * const error = useBadRequest("Invalid email format");
+ * throw error;
+ * ```
  */
-export class ErrorFactoryService implements IErrorFactory {
-	private static instance: ErrorFactoryService;
+export const useBadRequest = (message = "Bad Request"): AppError => new AppError(message, 400);
 
-	private constructor() {}
+/**
+ * Create an Unauthorized (401) error.
+ *
+ * @param message - Error message
+ * @returns AppError with status 401
+ *
+ * @example
+ * ```ts
+ * throw useUnauthorized("Token expired");
+ * ```
+ */
+export const useUnauthorized = (message = "Unauthorized"): AppError => new AppError(message, 401);
 
-	public static getInstance(): ErrorFactoryService {
-		if (!ErrorFactoryService.instance) {
-			ErrorFactoryService.instance = new ErrorFactoryService();
-		}
-		return ErrorFactoryService.instance;
-	}
+/**
+ * Create a Forbidden (403) error.
+ *
+ * @param message - Error message
+ * @returns AppError with status 403
+ *
+ * @example
+ * ```ts
+ * throw useForbidden("Insufficient permissions");
+ * ```
+ */
+export const useForbidden = (message = "Forbidden"): AppError => new AppError(message, 403);
 
-	public useBadRequest = (message = "Bad Request"): AppError => new AppError(message, 400);
+/**
+ * Create a Not Found (404) error.
+ *
+ * @param message - Error message
+ * @returns AppError with status 404
+ *
+ * @example
+ * ```ts
+ * throw useNotFound("User not found");
+ * ```
+ */
+export const useNotFound = (message = "Not Found"): AppError => new AppError(message, 404);
 
-	public useUnauthorized = (message = "Unauthorized"): AppError => new AppError(message, 401);
+/**
+ * Create an Internal Server Error (500) error.
+ *
+ * @param message - Error message
+ * @returns AppError with status 500
+ *
+ * @example
+ * ```ts
+ * throw useInternal("Database connection failed");
+ * ```
+ */
+export const useInternal = (message = "Internal Server Error"): AppError =>
+	new AppError(message, 500);
 
-	public useForbidden = (message = "Forbidden"): AppError => new AppError(message, 403);
-
-	public useNotFound = (message = "Not Found"): AppError => new AppError(message, 404);
-
-	public useInternal = (message = "Internal Server Error"): AppError => new AppError(message, 500);
-
-	public useCustom = (message: string, code: number): AppError => new AppError(message, code);
-}
-
-// Singleton instance and destructured exports.
-export const {
-	useBadRequest,
-	useUnauthorized,
-	useForbidden,
-	useNotFound,
-	useInternal,
-	useCustom,
-}: ErrorFactoryService = ErrorFactoryService.getInstance();
+/**
+ * Create a custom error with any status code.
+ *
+ * @param message - Error message
+ * @param code - HTTP status code
+ * @returns AppError with custom code
+ *
+ * @example
+ * ```ts
+ * throw useCustom("Rate limit exceeded", 429);
+ * ```
+ */
+export const useCustom = (message: string, code: number): AppError => new AppError(message, code);

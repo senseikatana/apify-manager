@@ -2,15 +2,30 @@ import type {
 	AstroPath,
 	AstroServiceResult,
 	CollectionEntryLike,
-	IAstroService,
 	PaginationProps,
 	PathsOptions,
 } from "../../types/index.js";
 
-/** Convierte una colección en rutas compatibles con `getStaticPaths` de Astro.
- * En un caso real, úsala para generar rutas desde posts, productos o páginas.
+/**
+ * Convert a collection into Astro-compatible static paths.
+ *
+ * @param items - Collection items to convert
+ * @param options - Configuration for param name, value extraction and props
+ * @returns Array of Astro paths with params and props
+ *
+ * @example
+ * ```ts
+ * // In Astro's getStaticPaths()
+ * const posts = await getCollection("blog");
+ * const paths = useAstroPathsFrom(posts, {
+ *   param: "slug",
+ *   valueFrom: (post) => post.slug,
+ *   propsFrom: (post) => ({ title: post.data.title }),
+ * });
+ * // [{ params: { slug: "hello-world" }, props: { title: "Hello World" } }]
+ * ```
  */
-export function usePathsFrom<T, TParam extends string = "slug", TProps = T>(
+export function useAstroPathsFrom<T, TParam extends string = "slug", TProps = T>(
 	items: T[],
 	options: PathsOptions<T, TParam, TProps> = {},
 ): AstroPath<TParam, TProps>[] {
@@ -33,10 +48,27 @@ export function usePathsFrom<T, TParam extends string = "slug", TProps = T>(
 	}));
 }
 
-/** Obtiene una colección y la transforma en rutas seguras para Astro.
- * Por ejemplo, puede usarse dentro de `getStaticPaths` para manejar errores sin lanzar excepciones.
+/**
+ * Fetch a collection and transform it into safe Astro paths.
+ * Returns a result object instead of throwing on error.
+ *
+ * @param getCollectionFn - Astro's getCollection function
+ * @param collectionName - Name of the collection to fetch
+ * @options - Path generation options
+ * @returns Safe result with data or error
+ *
+ * @example
+ * ```ts
+ * export async function getStaticPaths() {
+ *   const result = await useAstroGetStaticPaths(getCollection, "blog");
+ *   if (result.ok) return result.data;
+ *   TODO: traer el useLogger('error', result.error)
+ *   console.error(result.error);
+ *   return [];
+ * }
+ * ```
  */
-export async function useGetStaticPaths<
+export async function useAstroGetStaticPaths<
 	TData = unknown,
 	TParam extends string = "slug",
 	TProps = CollectionEntryLike<TData>,
@@ -47,7 +79,7 @@ export async function useGetStaticPaths<
 ): Promise<AstroServiceResult<AstroPath<TParam, TProps>[]>> {
 	try {
 		const entries = await getCollectionFn(collectionName);
-		return { data: usePathsFrom(entries, options), error: null, ok: true };
+		return { data: useAstroPathsFrom(entries, options), error: null, ok: true };
 	} catch (error: unknown) {
 		return {
 			data: null,
@@ -61,10 +93,22 @@ export async function useGetStaticPaths<
 	}
 }
 
-/** Busca una entrada por su clave o por `slug`/`id`.
- * Es útil para resolver una página dinámica a partir del parámetro de la URL.
+/**
+ * Find a collection entry by slug or custom key.
+ *
+ * @param items - Collection items to search
+ * @param value - Value to match (slug, id, etc.)
+ * @param keyFrom - Optional function to extract the key from an item
+ * @returns Matched item or null
+ *
+ * @example
+ * ```ts
+ * const posts = await getCollection("blog");
+ * const post = useAstroFindEntry(posts, "hello-world");
+ * if (post) console.log(post.data.title);
+ * ```
  */
-export function useFindEntry<T>(
+export function useAstroFindEntry<T>(
 	items: T[],
 	value: string,
 	keyFrom?: (item: T) => string | number,
@@ -78,10 +122,23 @@ export function useFindEntry<T>(
 	return items.find((item) => String(getKey(item)) === value) ?? null;
 }
 
-/** Genera las rutas y propiedades de cada página de una lista paginada.
- * Úsala para crear páginas `/page/2`, `/page/3`, etc., conservando la primera como ruta raíz.
+/**
+ * Generate paginated Astro paths from a list of items.
+ *
+ * @param items - Items to paginate
+ * @param pageSize - Number of items per page
+ * @param param - URL param name for page number
+ * @returns Array of Astro paths with pagination props
+ *
+ * @example
+ * ```ts
+ * const posts = await getCollection("blog");
+ * const pages = useAstroGeneratePagination(posts, 10);
+ * // [{ params: { page: undefined }, props: { items: [...], currentPage: 1, totalPages: 3 } },
+ * //  { params: { page: "2" }, props: { items: [...], currentPage: 2, totalPages: 3 } }, ...]
+ * ```
  */
-export function useGeneratePagination<T, TParam extends string = "page">(
+export function useAstroGeneratePagination<T, TParam extends string = "page">(
 	items: T[],
 	pageSize = 10,
 	param: TParam = "page" as TParam,
@@ -99,10 +156,21 @@ export function useGeneratePagination<T, TParam extends string = "page">(
 	});
 }
 
-/** Convierte valores simples en rutas Astro.
- * Por ejemplo, transforma una lista de categorías en rutas `/category/:slug`.
+/**
+ * Convert simple values into Astro paths.
+ *
+ * @param values - Array of string or number values
+ * @param param - URL param name
+ * @returns Array of Astro paths
+ *
+ * @example
+ * ```ts
+ * const categories = ["tech", "design", "business"];
+ * const paths = useAstroPathsFromValues(categories, "category");
+ * // [{ params: { category: "tech" }, props: "tech" }, ...]
+ * ```
  */
-export function usePathsFromValues<TParam extends string = "slug">(
+export function useAstroPathsFromValues<TParam extends string = "slug">(
 	values: (string | number)[],
 	param: TParam = "slug" as TParam,
 ): AstroPath<TParam, string | number>[] {
@@ -112,58 +180,20 @@ export function usePathsFromValues<TParam extends string = "slug">(
 	}));
 }
 
-/** Extrae valores únicos, admitiendo claves simples o arrays.
- * Es útil para construir filtros, taxonomías o rutas a partir de una colección.
+/**
+ * Extract unique values from a collection, supporting single values or arrays.
+ *
+ * @param items - Collection items
+ * @param keyFrom - Function to extract value(s) from each item
+ * @returns Array of unique values
+ *
+ * @example
+ * ```ts
+ * const posts = [{ tags: ["ts", "react"] }, { tags: ["ts", "vue"] }];
+ * const tags = useAstroExtractUniqueValues(posts, (p) => p.tags);
+ * // ["ts", "react", "vue"]
+ * ```
  */
-export function useExtractUniqueValues<T, V>(items: T[], keyFrom: (item: T) => V | V[]): V[] {
+export function useAstroExtractUniqueValues<T, V>(items: T[], keyFrom: (item: T) => V | V[]): V[] {
 	return [...new Set(items.flatMap(keyFrom))];
 }
-
-/** Fachada singleton compatible con la API orientada a objetos anterior. */
-export class AstroService implements IAstroService {
-	private static instance: AstroService;
-
-	private constructor() {}
-
-	public static getInstance(): AstroService {
-		if (!AstroService.instance) {
-			AstroService.instance = new AstroService();
-		}
-		return AstroService.instance;
-	}
-
-	public usePathsFrom = usePathsFrom;
-
-	public useGetStaticPaths = async <
-		TData = unknown,
-		TParam extends string = "slug",
-		TProps = CollectionEntryLike<TData>,
-	>(
-		getCollectionFn: (collection: string) => Promise<CollectionEntryLike<TData>[]>,
-		collectionName: string,
-		options: PathsOptions<CollectionEntryLike<TData>, TParam, TProps> = {},
-	): Promise<AstroServiceResult<AstroPath<TParam, TProps>[]>> =>
-		useGetStaticPaths(getCollectionFn, collectionName, options);
-
-	public useFindEntry = <T>(
-		items: T[],
-		value: string,
-		keyFrom?: (item: T) => string | number,
-	): T | null => useFindEntry(items, value, keyFrom);
-
-	public useGeneratePagination = <T, TParam extends string = "page">(
-		items: T[],
-		pageSize = 10,
-		param: TParam = "page" as TParam,
-	): AstroPath<TParam, PaginationProps<T>>[] => useGeneratePagination(items, pageSize, param);
-
-	public usePathsFromValues = <TParam extends string = "slug">(
-		values: (string | number)[],
-		param: TParam = "slug" as TParam,
-	): AstroPath<TParam, string | number>[] => usePathsFromValues(values, param);
-
-	public useExtractUniqueValues = useExtractUniqueValues;
-}
-
-// Singleton instance and destructured exports.
-export const astroService: AstroService = AstroService.getInstance();

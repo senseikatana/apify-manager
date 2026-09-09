@@ -32,6 +32,11 @@
       "import": "./dist/adapters/astro/index.js",
       "default": "./dist/adapters/astro/index.js"
     },
+    "./prisma": {
+      "types": "./dist/prisma/index.d.ts",
+      "import": "./dist/prisma/index.js",
+      "default": "./dist/prisma/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -111,6 +116,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "prisma": "^8.0.0-rc.13",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
