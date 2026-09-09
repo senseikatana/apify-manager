@@ -1,6 +1,5 @@
-# dependencies (bun install)
+# dependencies
 node_modules
-.yarnclean
 
 # output
 out
@@ -13,8 +12,8 @@ coverage
 
 # logs
 logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+*.log
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # dotenv environment variable files
 .env
@@ -25,10 +24,19 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cache
 *.tsbuildinfo
 
+# Yarn 4 (Berry)
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+
 # Generated TypeDoc markdown (produced by docs build / docs:dev)
 docs/docs/api/
 
-# IntelliJ based IDEs
+# IDEs
 .idea
 .zcode/
 .vscode/
@@ -37,6 +45,6 @@ docs/docs/api/
 .cursor/
 .claude/
 .devin/
-# Finder (MacOS) folder config
+
+# MacOS
 .DS_Store
-node_modules/

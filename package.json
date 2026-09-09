@@ -55,7 +55,9 @@
     "fix": "biome check --write ./src && tsc --noEmit && vitest run",
     "build": "yarn run check && tsc -p tsconfig.json",
     "release": "yarn build && npm version",
-    "docs": "yarn --cwd docs"
+    "docs:dev": "yarn workspace katanakit-docs run dev",
+    "docs:build": "yarn workspace katanakit-docs run build",
+    "docs:serve": "yarn workspace katanakit-docs run serve"
   },
   "repository": {
     "type": "git",
@@ -122,5 +124,6 @@
     "vite": "^8.2.2",
     "vitest": "^5.0.0",
     "vue": "^3.5.42"
-  }
+  },
+  "packageManager": "yarn@4.18.0"
 }
